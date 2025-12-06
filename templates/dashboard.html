@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Tableau de bord des déploiements PaaS">
+    <title>Tableau de Bord - PaaS Platform</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container nav-container">
+            <a href="/" class="logo">
+                <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+                    <path d="M16 4L4 10V22L16 28L28 22V10L16 4Z" stroke="url(#paint0_linear)" stroke-width="2" />
+                    <defs>
+                        <linearGradient id="paint0_linear" x1="4" y1="4" x2="28" y2="28">
+                            <stop stop-color="hsl(260, 80%, 60%)" />
+                            <stop offset="1" stop-color="hsl(200, 80%, 55%)" />
+                        </linearGradient>
+                    </defs>
+                </svg>
+                PaaS Platform
+            </a>
+            <ul class="nav-links">
+                <li><a href="/">Accueil</a></li>
+                <li><a href="/deploy">Nouveau Déploiement</a></li>
+                <li><a href="/dashboard">Tableau de Bord</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <section class="section" style="padding-top: 100px;">
+        <div class="container">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                <h1>Tableau de Bord</h1>
+                <a href="/deploy" class="btn btn-primary">+ Nouveau Déploiement</a>
+            </div>
+
+            <!-- Statistics Cards -->
+            <div class="grid grid-4 mb-3">
+                <div class="card">
+                    <p style="color: var(--text-secondary); margin-bottom: 0.5rem;">Total</p>
+                    <h2 class="text-gradient" id="stat-total">0</h2>
+                </div>
+                <div class="card">
+                    <p style="color: var(--text-secondary); margin-bottom: 0.5rem;">En cours</p>
+                    <h2 style="color: hsl(145, 63%, 59%);" id="stat-running">0</h2>
+                </div>
+                <div class="card">
+                    <p style="color: var(--text-secondary); margin-bottom: 0.5rem;">Échoués</p>
+                    <h2 style="color: hsl(357, 100%, 64%);" id="stat-failed">0</h2>
+                </div>
+                <div class="card">
+                    <p style="color: var(--text-secondary); margin-bottom: 0.5rem;">Taux de Réussite</p>
+                    <h2 style="color: hsl(200, 80%, 55%);" id="stat-success-rate">100%</h2>
+                </div>
+            </div>
+
+            <!-- Deployments List -->
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                    <h2>Mes Déploiements</h2>
+                    <button onclick="loadDeployments()" class="btn btn-secondary" style="padding: 0.5rem 1rem;">
+                        🔄 Actualiser
+                    </button>
+                </div>
+
+                <div id="deployments-container">
+                    <!-- Deployments will be loaded here -->
+                    <div style="text-align: center; padding: 3rem;">
+                        <div class="spinner" style="margin: 0 auto 1rem;"></div>
+                        <p>Chargement des déploiements...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script>
+        // Status badge colors
+        const STATUS_COLORS = {
+            pending: 'hsl(43, 100%, 60%)',
+            provisioning: 'hsl(200, 80%, 55%)',
+            deploying: 'hsl(200, 80%, 55%)',
+            running: 'hsl(145, 63%, 59%)',
+            failed: 'hsl(357, 100%, 64%)',
+            stopped: 'hsl(0, 0%, 60%)',
+            deleted: 'hsl(0, 0%, 40%)'
+        };
+
+        // Status icons
+        const STATUS_ICONS = {
+            pending: '⏳',
+            provisioning: '⚙️',
+            deploying: '🚀',
+            running: '✅',
+            failed: '❌',
+            stopped: '⏸️',
+            deleted: '🗑️'
+        };
+
+        // Load statistics
+        async function loadStats() {
+            try {
+                const response = await fetch('/api/stats');
+                const data = await response.json();
+
+                if (data.success) {
+                    document.getElementById('stat-total').textContent = data.stats.total_deployments;
+                    document.getElementById('stat-running').textContent = data.stats.running_deployments;
+                    document.getElementById('stat-failed').textContent = data.stats.failed_deployments;
+                    document.getElementById('stat-success-rate').textContent =
+                        data.stats.success_rate.toFixed(1) + '%';
+                }
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+
+        // Load deployments
+        async function loadDeployments() {
+            const container = document.getElementById('deployments-container');
+
+            try {
+                const response = await fetch('/api/deployments');
+                const data = await response.json();
+
+                if (data.success) {
+                    if (data.deployments.length === 0) {
+                        container.innerHTML = `
+                            <div style="text-align: center; padding: 3rem;">
+                                <div style="font-size: 4rem; margin-bottom: 1rem;">📦</div>
+                                <h3 style="margin-bottom: 1rem;">Aucun déploiement</h3>
+                                <p style="margin-bottom: 2rem;">Créez votre premier déploiement pour commencer</p>
+                                <a href="/deploy" class="btn btn-primary">Créer un Déploiement</a>
+                            </div>
+                        `;
+                    } else {
+                        container.innerHTML = '';
+
+                        // Create table
+                        const table = document.createElement('div');
+                        table.style.overflowX = 'auto';
+
+                        table.innerHTML = `
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <thead>
+                                    <tr style="border-bottom: 1px solid var(--border);">
+                                        <th style="text-align: left; padding: 1rem;">Nom</th>
+                                        <th style="text-align: left; padding: 1rem;">Type</th>
+                                        <th style="text-align: left; padding: 1rem;">Framework</th>
+                                        <th style="text-align: left; padding: 1rem;">Status</th>
+                                        <th style="text-align: left; padding: 1rem;">IP</th>
+                                        <th style="text-align: left; padding: 1rem;">Ressources</th>
+                                        <th style="text-align: right; padding: 1rem;">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="deployments-tbody">
+                                </tbody>
+                            </table>
+                        `;
+
+                        container.appendChild(table);
+
+                        const tbody = document.getElementById('deployments-tbody');
+
+                        data.deployments.forEach(deployment => {
+                            const row = document.createElement('tr');
+                            row.style.borderBottom = '1px solid var(--border)';
+
+                            const statusColor = STATUS_COLORS[deployment.status] || 'var(--text-secondary)';
+                            const statusIcon = STATUS_ICONS[deployment.status] || '●';
+
+                            row.innerHTML = `
+                                <td style="padding: 1rem;">
+                                    <strong>${deployment.name}</strong>
+                                    <br>
+                                    <small style="color: var(--text-secondary);">
+                                        ${new Date(deployment.created_at).toLocaleString('fr-FR')}
+                                    </small>
+                                </td>
+                                <td style="padding: 1rem;">
+                                    ${deployment.deployment_type === 'vm' ? '🖥️ VM' : '📦 LXC'}
+                                </td>
+                                <td style="padding: 1rem;">${deployment.framework}</td>
+                                <td style="padding: 1rem;">
+                                    <span style="color: ${statusColor};">
+                                        ${statusIcon} ${deployment.status}
+                                    </span>
+                                </td>
+                                <td style="padding: 1rem;">
+                                    ${deployment.ip_address ?
+                                    `<a href="http://${deployment.ip_address}" target="_blank" style="color: var(--primary);">${deployment.ip_address}</a>` :
+                                    '<span style="color: var(--text-secondary);">N/A</span>'}
+                                </td>
+                                <td style="padding: 1rem;">
+                                    <small style="color: var(--text-secondary);">
+                                        ${deployment.resources.cores} Cores<br>
+                                        ${deployment.resources.memory} MB RAM<br>
+                                        ${deployment.resources.disk} GB Disk
+                                    </small>
+                                </td>
+                                <td style="padding: 1rem; text-align: right;">
+                                    <button 
+                                        onclick="viewDeployment('${deployment.id}')" 
+                                        class="btn btn-secondary" 
+                                        style="padding: 0.5rem 1rem; font-size: 0.875rem; margin-right: 0.5rem;"
+                                    >
+                                        👁️ Voir
+                                    </button>
+                                    ${deployment.status !== 'deleted' ? `
+                                        <button 
+                                            onclick="deleteDeployment('${deployment.id}', '${deployment.name}')" 
+                                            class="btn btn-secondary" 
+                                            style="padding: 0.5rem 1rem; font-size: 0.875rem; color: hsl(357, 100%, 64%);"
+                                        >
+                                            🗑️ Supprimer
+                                        </button>
+                                    ` : ''}
+                                </td>
+                            `;
+
+                            tbody.appendChild(row);
+                        });
+                    }
+
+                    // Reload stats
+                    loadStats();
+                }
+            } catch (error) {
+                console.error('Error loading deployments:', error);
+                container.innerHTML = `
+                    <div class="alert alert-error">
+                        Erreur lors du chargement des déploiements: ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        // View deployment details
+        function viewDeployment(id) {
+            // For now, just log the ID
+            console.log('View deployment:', id);
+            alert('Fonctionnalité à venir: Afficher les détails du déploiement ' + id);
+        }
+
+        // Delete deployment
+        async function deleteDeployment(id, name) {
+            if (!confirm(`Êtes-vous sûr de vouloir supprimer le déploiement "${name}" ?`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/deployments/${id}`, {
+                    method: 'DELETE'
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('Déploiement supprimé avec succès');
+                    loadDeployments();
+                } else {
+                    alert('Erreur: ' + data.error);
+                }
+            } catch (error) {
+                console.error('Error deleting deployment:', error);
+                alert('Erreur lors de la suppression: ' + error.message);
+            }
+        }
+
+        // Auto-refresh every 30 seconds
+        setInterval(loadDeployments, 30000);
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadStats();
+            loadDeployments();
+        });
+    </script>
+</body>
+
+</html>

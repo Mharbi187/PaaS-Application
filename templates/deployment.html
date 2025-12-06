@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Créer un nouveau déploiement sur la plateforme PaaS">
+    <title>Nouveau Déploiement - PaaS Platform</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container nav-container">
+            <a href="/" class="logo">
+                <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+                    <path d="M16 4L4 10V22L16 28L28 22V10L16 4Z" stroke="url(#paint0_linear)" stroke-width="2" />
+                    <defs>
+                        <linearGradient id="paint0_linear" x1="4" y1="4" x2="28" y2="28">
+                            <stop stop-color="hsl(260, 80%, 60%)" />
+                            <stop offset="1" stop-color="hsl(200, 80%, 55%)" />
+                        </linearGradient>
+                    </defs>
+                </svg>
+                PaaS Platform
+            </a>
+            <ul class="nav-links">
+                <li><a href="/">Accueil</a></li>
+                <li><a href="/deploy">Nouveau Déploiement</a></li>
+                <li><a href="/dashboard">Tableau de Bord</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <section class="section" style="padding-top: 100px;">
+        <div class="container">
+            <div style="max-width: 800px; margin: 0 auto;">
+                <h1 class="text-center mb-2">Nouveau Déploiement</h1>
+                <p class="text-center mb-3" style="font-size: 1.125rem;">
+                    Configurez votre environnement et déployez votre application automatiquement
+                </p>
+
+                <!-- Deployment Form -->
+                <div class="card">
+                    <form id="deployment-form">
+                        <!-- Deployment Name -->
+                        <div class="form-group">
+                            <label class="form-label" for="deployment-name">
+                                Nom du Déploiement *
+                            </label>
+                            <input type="text" id="deployment-name" name="name" class="form-input"
+                                placeholder="mon-application" required pattern="[a-zA-Z0-9_\-]{3,50}"
+                                title="Lettres, chiffres, tirets et underscores uniquement (3-50 caractères)">
+                        </div>
+
+                        <!-- Deployment Type -->
+                        <div class="form-group">
+                            <label class="form-label">Type de Déploiement *</label>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                <label class="card" style="cursor: pointer; transition: all 0.3s;">
+                                    <input type="radio" name="deployment_type" value="vm" checked
+                                        style="display: none;">
+                                    <div style="text-align: center;">
+                                        <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🖥️</div>
+                                        <h4>Machine Virtuelle</h4>
+                                        <p style="font-size: 0.9rem;">Isolation complète, plus de ressources</p>
+                                    </div>
+                                </label>
+                                <label class="card" style="cursor: pointer; transition: all 0.3s;">
+                                    <input type="radio" name="deployment_type" value="lxc" style="display: none;">
+                                    <div style="text-align: center;">
+                                        <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">📦</div>
+                                        <h4>Conteneur LXC</h4>
+                                        <p style="font-size: 0.9rem;">Léger, démarrage rapide</p>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Framework Selection -->
+                        <div class="form-group">
+                            <label class="form-label" for="framework">Framework *</label>
+                            <select id="framework" name="framework" class="form-select" required>
+                                <option value="">Sélectionnez un framework</option>
+                                <!-- Options loaded dynamically -->
+                            </select>
+                        </div>
+
+                        <!-- GitHub URL -->
+                        <div class="form-group">
+                            <label class="form-label" for="github-url">
+                                URL du Dépôt GitHub *
+                            </label>
+                            <input type="url" id="github-url" name="github_url" class="form-input"
+                                placeholder="https://github.com/username/repository" required
+                                pattern="https?://github\.com/[\w\-]+/[\w\.\-]+">
+                            <small style="color: var(--text-secondary); display: block; margin-top: 0.5rem;">
+                                Le dépôt doit être public ou vous devez avoir configuré l'accès
+                            </small>
+                        </div>
+
+                        <!-- Resources Configuration -->
+                        <h3 class="mt-2 mb-1">Configuration des Ressources</h3>
+
+                        <div class="grid grid-3">
+                            <div class="form-group">
+                                <label class="form-label" for="cores">CPU Cores</label>
+                                <input type="number" id="cores" name="cores" class="form-input" min="1" max="16"
+                                    value="2">
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label" for="memory">RAM (MB)</label>
+                                <input type="number" id="memory" name="memory" class="form-input" min="512" max="32768"
+                                    step="512" value="2048">
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label" for="disk">Disque (GB)</label>
+                                <input type="number" id="disk" name="disk" class="form-input" min="10" max="500"
+                                    value="20">
+                            </div>
+                        </div>
+
+                        <!-- Environment Variables (Optional) -->
+                        <h3 class="mt-2 mb-1">Variables d'Environnement (Optionnel)</h3>
+                        <div class="form-group">
+                            <label class="form-label" for="env-vars">
+                                Variables d'environnement
+                            </label>
+                            <textarea id="env-vars" name="env_vars" class="form-input" rows="4"
+                                placeholder="KEY1=value1&#10;KEY2=value2&#10;DATABASE_URL=mongodb://..."></textarea>
+                            <small style="color: var(--text-secondary); display: block; margin-top: 0.5rem;">
+                                Format: KEY=value (une par ligne). Exemples: PORT, MONGODB_URI, NODE_ENV, etc.
+                            </small>
+                        </div>
+
+                        <!-- Alert Messages -->
+                        <div id="alert-container"></div>
+
+                        <!-- Submit Button -->
+                        <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                            <button type="submit" class="btn btn-primary" id="submit-btn" style="flex: 1;">
+                                🚀 Déployer Automatiquement
+                            </button>
+                            <a href="/dashboard" class="btn btn-secondary">Annuler</a>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Deployment Progress (hidden by default) -->
+                <div id="progress-container" style="display: none;" class="card mt-2">
+                    <h3 class="text-center mb-2">🚀 Déploiement en cours</h3>
+                    <div style="text-align: center;">
+                        <div class="spinner" style="margin: 2rem auto;"></div>
+                        <p id="progress-message">Initialisation du déploiement...</p>
+                        <ul id="progress-steps" style="text-align: left; max-width: 600px; margin: 1rem auto; list-style: none; padding: 0;">
+                            <li style="padding: 0.5rem; color: var(--text-secondary);">⏳ Génération de la configuration Terraform...</li>
+                            <li style="padding: 0.5rem; color: var(--text-secondary);">⏳ Provisionnement de l'infrastructure Proxmox...</li>
+                            <li style="padding: 0.5rem; color: var(--text-secondary);">⏳ Configuration SSH et attente de disponibilité...</li>
+                            <li style="padding: 0.5rem; color: var(--text-secondary);">⏳ Installation des dépendances système...</li>
+                            <li style="padding: 0.5rem; color: var(--text-secondary);">⏳ Clonage du dépôt GitHub...</li>
+                            <li style="padding: 0.5rem; color: var(--text-secondary);">⏳ Déploiement de l'application...</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script>
+        // Load frameworks
+        async function loadFrameworks() {
+            try {
+                const response = await fetch('/api/frameworks');
+                const data = await response.json();
+
+                if (data.success) {
+                    const select = document.getElementById('framework');
+
+                    Object.entries(data.frameworks).forEach(([key, framework]) => {
+                        const option = document.createElement('option');
+                        option.value = key;
+                        option.textContent = `${framework.name} (${framework.language})`;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading frameworks:', error);
+            }
+        }
+
+        // Handle deployment type selection
+        document.querySelectorAll('input[name="deployment_type"]').forEach(radio => {
+            radio.addEventListener('change', function () {
+                // Update card styling
+                document.querySelectorAll('label.card').forEach(label => {
+                    label.style.borderColor = 'var(--border)';
+                    label.style.background = 'var(--bg-card)';
+                });
+
+                this.parentElement.style.borderColor = 'var(--primary)';
+                this.parentElement.style.background = 'rgba(160, 100, 255, 0.1)';
+
+                // Update resource limits based on type
+                const isVM = this.value === 'vm';
+                const coresInput = document.getElementById('cores');
+                const memoryInput = document.getElementById('memory');
+                const diskInput = document.getElementById('disk');
+
+                if (isVM) {
+                    coresInput.max = 16;
+                    memoryInput.max = 32768;
+                    diskInput.max = 500;
+                    coresInput.value = 2;
+                    memoryInput.value = 2048;
+                    diskInput.value = 20;
+                } else {
+                    coresInput.max = 8;
+                    memoryInput.max = 16384;
+                    diskInput.max = 200;
+                    coresInput.value = 1;
+                    memoryInput.value = 1024;
+                    diskInput.value = 10;
+                }
+            });
+        });
+
+        // Handle form submission
+        document.getElementById('deployment-form').addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const alertContainer = document.getElementById('alert-container');
+            const progressContainer = document.getElementById('progress-container');
+            const submitBtn = document.getElementById('submit-btn');
+
+            // Clear previous alerts
+            alertContainer.innerHTML = '';
+
+            // Get form data
+            const formData = {
+                name: document.getElementById('deployment-name').value,
+                deployment_type: document.querySelector('input[name="deployment_type"]:checked').value,
+                framework: document.getElementById('framework').value,
+                github_url: document.getElementById('github-url').value,
+                resources: {
+                    cores: parseInt(document.getElementById('cores').value),
+                    memory: parseInt(document.getElementById('memory').value),
+                    disk: parseInt(document.getElementById('disk').value)
+                }
+            };
+
+            // Parse environment variables
+            const envVarsText = document.getElementById('env-vars').value.trim();
+            if (envVarsText) {
+                const envVars = {};
+                envVarsText.split('\n').forEach(line => {
+                    const [key, ...valueParts] = line.split('=');
+                    if (key && valueParts.length > 0) {
+                        envVars[key.trim()] = valueParts.join('=').trim();
+                    }
+                });
+                formData.env_vars = envVars;
+            }
+
+            // Show progress
+            progressContainer.style.display = 'block';
+            submitBtn.disabled = true;
+            submitBtn.textContent = '🚀 Déploiement en cours...';
+
+            try {
+                const response = await fetch('/api/deploy', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const data = await response.json();
+
+                progressContainer.style.display = 'none';
+
+                if (data.success) {
+                    // Show success message
+                    alertContainer.innerHTML = `
+                        <div class="alert alert-success">
+                            <h4 style="margin-top: 0;">✅ Application Déployée avec Succès!</h4>
+                            <div style="margin: 1rem 0; padding: 1rem; background: rgba(255,255,255,0.1); border-radius: 8px;">
+                                <p><strong>🚀 Application:</strong> ${data.deployment.name}</p>
+                                <p><strong>📍 IP Address:</strong> ${data.deployment.ip_address}</p>
+                                <p><strong>🆔 VM/LXC ID:</strong> ${data.deployment.vm_id}</p>
+                                <p><strong>🔗 Access URL:</strong> <a href="${data.deployment.access_url}" target="_blank" style="color: #4CAF50;">${data.deployment.access_url}</a></p>
+                                <hr style="margin: 1rem 0; border-color: rgba(255,255,255,0.2);">
+                                <p style="color: rgba(255,255,255,0.7);">Votre application est maintenant accessible. Consultez le tableau de bord pour plus de détails.</p>
+                            </div>
+                        </div>
+                    `;
+
+                    // Reset form
+                    this.reset();
+
+                    // Redirect to dashboard after 5 seconds
+                    setTimeout(() => {
+                        window.location.href = '/dashboard';
+                    }, 5000);
+                } else {
+                    // Show error
+                    const errors = data.errors || [data.error];
+                    alertContainer.innerHTML = `
+                        <div class="alert alert-error">
+                            <strong>Erreur :</strong>
+                            <ul style="margin-top: 0.5rem;">
+                                ${errors.map(err => `<li>${err}</li>`).join('')}
+                            </ul>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                progressContainer.style.display = 'none';
+                alertContainer.innerHTML = `
+                    <div class="alert alert-error">
+                        <strong>Erreur :</strong> ${error.message}
+                    </div>
+                `;
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Déployer l\'Application';
+            }
+        });
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadFrameworks();
+
+            // Trigger change on first radio to set initial styling
+            document.querySelector('input[name="deployment_type"]:checked').dispatchEvent(new Event('change'));
+        });
+    </script>
+</body>
+
+</html>

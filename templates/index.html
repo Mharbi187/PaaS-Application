@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Plateforme PaaS privée pour le déploiement automatique d'applications sur Proxmox">
+    <title>PaaS Platform - Accueil</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container nav-container">
+            <a href="/" class="logo">
+                <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+                    <path d="M16 4L4 10V22L16 28L28 22V10L16 4Z" stroke="url(#paint0_linear)" stroke-width="2"/>
+                    <defs>
+                        <linearGradient id="paint0_linear" x1="4" y1="4" x2="28" y2="28">
+                            <stop stop-color="hsl(260, 80%, 60%)"/>
+                            <stop offset="1" stop-color="hsl(200, 80%, 55%)"/>
+                        </linearGradient>
+                    </defs>
+                </svg>
+                PaaS Platform
+            </a>
+            <ul class="nav-links">
+                <li><a href="/">Accueil</a></li>
+                <li><a href="/deploy">Nouveau Déploiement</a></li>
+                <li><a href="/dashboard">Tableau de Bord</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="section" style="padding-top: 100px;">
+        <div class="container">
+            <div style="max-width: 900px; margin: 0 auto; text-align: center;">
+                <h1 class="fade-in">
+                    Déployez vos applications 
+                    <span class="text-gradient">en quelques clics</span>
+                </h1>
+                <p class="slide-up" style="font-size: 1.25rem; margin-bottom: 2rem; animation-delay: 0.2s;">
+                    Une plateforme PaaS privée basée sur Proxmox pour déployer automatiquement 
+                    vos applications Django, Laravel, Node.js et plus encore.
+                </p>
+                <div class="slide-up" style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; animation-delay: 0.4s;">
+                    <a href="/deploy" class="btn btn-primary">Commencer un Déploiement</a>
+                    <a href="/dashboard" class="btn btn-secondary">Voir les Déploiements</a>
+                </div>
+
+                <!-- Stats -->
+                <div class="grid grid-3 mt-3" id="stats-grid">
+                    <div class="card">
+                        <h3 class="text-gradient" id="total-deployments">0</h3>
+                        <p>Déploiements Total</p>
+                    </div>
+                    <div class="card">
+                        <h3 class="text-gradient" id="active-deployments">0</h3>
+                        <p>Déploiements Actifs</p>
+                    </div>
+                    <div class="card">
+                        <h3 class="text-gradient" id="success-rate">100%</h3>
+                        <p>Taux de Réussite</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="section">
+        <div class="container">
+            <h2 class="text-center mb-3">Fonctionnalités Principales</h2>
+            
+            <div class="grid grid-3">
+                <div class="card">
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">🚀</div>
+                    <h3>Déploiement Rapide</h3>
+                    <p>Déployez vos applications en quelques minutes grâce à l'automatisation complète avec Terraform.</p>
+                </div>
+                
+                <div class="card">
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">🔧</div>
+                    <h3>Multi-Framework</h3>
+                    <p>Support pour Django, Laravel, Express.js, React, Vue.js et de nombreux autres frameworks.</p>
+                </div>
+                
+                <div class="card">
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">📦</div>
+                    <h3>VM ou LXC</h3>
+                    <p>Choisissez entre des machines virtuelles complètes ou des conteneurs légers selon vos besoins.</p>
+                </div>
+                
+                <div class="card">
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">🔗</div>
+                    <h3>Intégration GitHub</h3>
+                    <p>Déployez directement depuis vos dépôts GitHub publics ou privés.</p>
+                </div>
+                
+                <div class="card">
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">📊</div>
+                    <h3>Gestion Simplifiée</h3>
+                    <p>Interface intuitive pour gérer tous vos déploiements depuis un seul endroit.</p>
+                </div>
+                
+                <div class="card">
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">🔒</div>
+                    <h3>Sécurisé</h3>
+                    <p>Infrastructure privée avec isolation complète entre les déploiements.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Frameworks Section -->
+    <section class="section">
+        <div class="container">
+            <h2 class="text-center mb-3">Frameworks Supportés</h2>
+            
+            <div class="grid grid-4" id="frameworks-grid">
+                <!-- Frameworks will be loaded dynamically -->
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="section">
+        <div class="container">
+            <div class="card" style="text-align: center; padding: 3rem;">
+                <h2 class="mb-2">Prêt à déployer votre première application ?</h2>
+                <p style="font-size: 1.125rem; margin-bottom: 2rem;">
+                    Commencez maintenant et déployez votre application en quelques minutes.
+                </p>
+                <a href="/deploy" class="btn btn-primary">Créer un Déploiement</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer style="padding: 2rem 0; text-align: center; border-top: 1px solid var(--border);">
+        <div class="container">
+            <p style="color: var(--text-secondary);">
+                &copy; 2025 PaaS Platform. Propulsé par Proxmox & Terraform.
+            </p>
+        </div>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script>
+        // Load statistics
+        async function loadStats() {
+            try {
+                const response = await fetch('/api/stats');
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('total-deployments').textContent = data.stats.total_deployments;
+                    document.getElementById('active-deployments').textContent = data.stats.running_deployments;
+                    document.getElementById('success-rate').textContent = 
+                        data.stats.success_rate.toFixed(1) + '%';
+                }
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+
+        // Load supported frameworks
+        async function loadFrameworks() {
+            try {
+                const response = await fetch('/api/frameworks');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const grid = document.getElementById('frameworks-grid');
+                    
+                    Object.entries(data.frameworks).forEach(([key, framework]) => {
+                        const card = document.createElement('div');
+                        card.className = 'card';
+                        card.innerHTML = `
+                            <h3>${framework.name}</h3>
+                            <p style="font-size: 0.9rem; color: var(--text-secondary);">
+                                ${framework.language} • Port ${framework.port}
+                            </p>
+                        `;
+                        grid.appendChild(card);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading frameworks:', error);
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadStats();
+            loadFrameworks();
+        });
+    </script>
+</body>
+</html>
