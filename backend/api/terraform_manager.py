@@ -443,28 +443,36 @@ class TerraformManager:
         port = framework_config['port']
         commands = []
         
-        # Base setup
-        commands.append('apt update')
+        # Helper to wait for apt lock
+        wait_for_lock = "while fuser /var/lib/dpkg/lock >/dev/null 2>&1 || fuser /var/lib/apt/lists/lock >/dev/null 2>&1; do echo 'Waiting for lock...'; sleep 1; done;"
+        
+        # Base setup - Chain commands to persist environment and ensure sequential execution
+        base_cmd = f"export DEBIAN_FRONTEND=noninteractive && {wait_for_lock} apt-get update && {wait_for_lock} apt-get install -y apt-utils git curl build-essential"
+        commands.append(base_cmd)
         
         # Language-specific installation
         if language == 'nodejs':
-            commands.extend([
-                'apt install -y curl git',
-                'curl -fsSL https://deb.nodesource.com/setup_18.x | bash -',
-                'apt install -y nodejs'
-            ])
+            node_cmd = (
+                f"export DEBIAN_FRONTEND=noninteractive && {wait_for_lock} "
+                "curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && "
+                f"{wait_for_lock} apt-get install -y nodejs"
+            )
+            commands.append(node_cmd)
+            
         elif language == 'python':
-            commands.extend([
-                'apt install -y python3 python3-pip git'
-            ])
+            py_cmd = f"export DEBIAN_FRONTEND=noninteractive && {wait_for_lock} apt-get install -y python3 python3-pip"
+            commands.append(py_cmd)
+            
         elif language == 'php':
-            commands.extend([
-                'apt install -y php php-cli php-fpm php-mysql git composer'
-            ])
+            php_cmd = f"export DEBIAN_FRONTEND=noninteractive && {wait_for_lock} apt-get install -y php php-cli php-fpm php-mysql composer"
+            commands.append(php_cmd)
+        
+        # Application setup
+        # Clean up previous app dir if exists
+        commands.append('rm -rf /opt/app')
         
         # Clone repository
         commands.append(f'git clone {github_url} /opt/app')
-        commands.append('cd /opt/app')
         
         # Create .env file if env_vars provided
         if env_vars:
@@ -472,38 +480,43 @@ class TerraformManager:
             commands.append(f'cat > /opt/app/.env << EOF\\n{env_content}\\nEOF')
         
         # Install dependencies and start based on framework
+        start_script = ""
+        
         if framework == 'react':
-            commands.extend([
-                'cd /opt/app && npm install',
-                'cd /opt/app && nohup npm start > /var/log/app.log 2>&1 &'
-            ])
+            start_script = (
+                "cd /opt/app && npm install && npm run build && "
+                "npm install -g serve && "
+                "nohup serve -s build -l 3000 > /var/log/app.log 2>&1 &"
+            )
         elif framework in ['express', 'nextjs']:
-            commands.extend([
-                'cd /opt/app && npm install',
-                'cd /opt/app && nohup npm start > /var/log/app.log 2>&1 &'
-            ])
+            start_script = (
+                "cd /opt/app && npm install && "
+                "nohup npm start > /var/log/app.log 2>&1 &"
+            )
         elif framework == 'django':
-            commands.extend([
-                'cd /opt/app && pip3 install -r requirements.txt',
-                'cd /opt/app && nohup python3 manage.py runserver 0.0.0.0:8000 > /var/log/app.log 2>&1 &'
-            ])
+            start_script = (
+                "cd /opt/app && pip3 install -r requirements.txt && "
+                "nohup python3 manage.py runserver 0.0.0.0:8000 > /var/log/app.log 2>&1 &"
+            )
         elif framework == 'flask':
-            commands.extend([
-                'cd /opt/app && pip3 install -r requirements.txt',
-                'cd /opt/app && nohup python3 app.py > /var/log/app.log 2>&1 &'
-            ])
+            start_script = (
+                "cd /opt/app && pip3 install -r requirements.txt && "
+                "nohup python3 app.py > /var/log/app.log 2>&1 &"
+            )
         elif framework == 'laravel':
-            commands.extend([
-                'cd /opt/app && composer install',
-                'cd /opt/app && php artisan key:generate',
-                'cd /opt/app && nohup php artisan serve --host=0.0.0.0 --port=8000 > /var/log/app.log 2>&1 &'
-            ])
+            start_script = (
+                "cd /opt/app && composer install && "
+                "php artisan key:generate && "
+                "nohup php artisan serve --host=0.0.0.0 --port=8000 > /var/log/app.log 2>&1 &"
+            )
         else:
             # Generic Node.js app
-            commands.extend([
-                'cd /opt/app && npm install',
-                'cd /opt/app && nohup npm start > /var/log/app.log 2>&1 &'
-            ])
+            start_script = (
+                "cd /opt/app && npm install && "
+                "nohup npm start > /var/log/app.log 2>&1 &"
+            )
+            
+        commands.append(start_script)
         
         return commands
     
@@ -567,6 +580,12 @@ class TerraformManager:
                         # Get LXC network interfaces
                         interfaces = proxmox.nodes(node).lxc(vm_id).interfaces.get()
                         
+                        # Ensure interfaces is a list
+                        if not interfaces:
+                            if attempt < max_retries - 1:
+                                time.sleep(3)
+                            continue
+
                         # Look for eth0 with inet address
                         for interface in interfaces:
                             if interface.get('name') == 'eth0' and 'inet' in interface:
@@ -576,10 +595,21 @@ class TerraformManager:
                                     return ip
                     else:
                         # Get VM network interfaces (for QEMU VMs)
-                        interfaces = proxmox.nodes(node).qemu(vm_id).agent.get('network-get-interfaces')
+                        try:
+                            agent_info = proxmox.nodes(node).qemu(vm_id).agent.get('network-get-interfaces')
+                        except Exception:
+                            # Agent might not be running yet
+                            agent_info = None
+
+                        if not agent_info or not agent_info.get('result'):
+                            if attempt < max_retries - 1:
+                                time.sleep(3)
+                            continue
+
+                        interfaces = agent_info.get('result', [])
                         
                         # Look for network interface with IP
-                        for iface in interfaces.get('result', []):
+                        for iface in interfaces:
                             if iface.get('name') in ['eth0', 'ens18']:
                                 for ip_addr in iface.get('ip-addresses', []):
                                     if ip_addr.get('ip-address-type') == 'ipv4':
