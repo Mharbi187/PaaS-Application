@@ -21,6 +21,7 @@ wheels/
 *.egg
 MANIFEST
 venv/
+.venv/
 env/
 ENV/
 
@@ -43,6 +44,14 @@ terraform/*.tfstate.*
 terraform/*.tfvars
 terraform/states/
 *.tfvars.json
+.terraform.lock.hcl
+
+# SSH Keys (IMPORTANT: Never commit private keys!)
+ssh_keys/
+*.pem
+*.key
+id_rsa
+id_rsa.pub
 
 # IDE
 .vscode/

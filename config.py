@@ -4,8 +4,22 @@ Loads environment variables and provides configuration settings
 """
 
 import os
+import sys
 from dotenv import load_dotenv
 from pathlib import Path
+
+# Check if .env exists, if not create from example
+env_path = Path('.env')
+if not env_path.exists():
+    env_example = Path('.env.example')
+    if env_example.exists():
+        print("⚠️  .env file not found. Creating from .env.example...")
+        import shutil
+        shutil.copy(env_example, env_path)
+        print("✅ .env created. Please configure it with your settings.")
+    else:
+        print("❌ Neither .env nor .env.example found!")
+        print("   Please create a .env file with required configuration.")
 
 # Load environment variables
 load_dotenv()

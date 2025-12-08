@@ -5,6 +5,7 @@ Main Flask application for PaaS Platform
 from flask import Flask, render_template, jsonify, request
 from flask_cors import CORS
 import logging
+import sys
 from pathlib import Path
 from config import config, Config
 
@@ -86,13 +87,26 @@ def create_app(config_name='default'):
 
 
 if __name__ == '__main__':
-    # Create app instance
-    app = create_app('development')
-    
-    # Run the application
-    app.run(
-        host=app.config['APP_HOST'],
-        port=app.config['APP_PORT'],
-        debug=app.config['DEBUG'],
-        use_reloader=False  # Disable auto-reloader
-    )
+    try:
+        # Create app instance
+        app = create_app('development')
+        
+        # Log startup info
+        logger = logging.getLogger(__name__)
+        logger.info(f"Starting PaaS Platform on {app.config['APP_HOST']}:{app.config['APP_PORT']}")
+        logger.info(f"Debug mode: {app.config['DEBUG']}")
+        
+        # Run the application
+        app.run(
+            host=app.config['APP_HOST'],
+            port=app.config['APP_PORT'],
+            debug=app.config['DEBUG'],
+            use_reloader=False  # Disable auto-reloader
+        )
+    except KeyboardInterrupt:
+        print("\n\n🛑 Application stopped by user")
+    except Exception as e:
+        print(f"\n\n❌ Failed to start application: {e}")
+        logging.error(f"Startup error: {e}", exc_info=True)
+        import sys
+        sys.exit(1)
