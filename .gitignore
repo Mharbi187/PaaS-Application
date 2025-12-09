@@ -45,6 +45,8 @@ terraform/*.tfvars
 terraform/states/
 *.tfvars.json
 .terraform.lock.hcl
+terraform-plugin-*.log
+terraform/*.log
 
 # SSH Keys (IMPORTANT: Never commit private keys!)
 ssh_keys/

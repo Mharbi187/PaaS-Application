@@ -281,8 +281,9 @@ class TerraformManager:
             ip_address = outputs.get('ip_address', {}).get('value')
             
             # If IP is not resolved (for LXC with DHCP), get it from Proxmox
-            if ip_address in ['Check Proxmox Console', 'pending', None]:
-                logger.info(f"IP not in outputs, fetching from Proxmox for VM/LXC ID {vm_id}")
+            # Check for various "pending" states from Terraform output
+            if ip_address in ['Check Proxmox Console', 'pending', 'Pending (Check Dashboard)', None] or not ip_address:
+                logger.info(f"IP not in outputs (value: {ip_address}), fetching from Proxmox for VM/LXC ID {vm_id}")
                 ip_address = self._get_ip_from_proxmox(vm_id, config['deployment_type'])
             
             logger.info(f"Terraform applied successfully for {deployment_name}. IP: {ip_address}")
@@ -579,21 +580,29 @@ class TerraformManager:
             IP address as string
         """
         try:
-            # Parse Proxmox URL to extract host
+            from requests.packages.urllib3.exceptions import InsecureRequestWarning
+            import requests
+            
+            # Suppress SSL warnings
+            requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+            
             proxmox_url = current_app.config['PROXMOX_URL']
-            # Extract host from URL like https://192.168.100.2:8006/api2/json
-            import re
-            host_match = re.search(r'https?://([^:/]+)', proxmox_url)
-            if not host_match:
-                raise ValueError(f"Invalid Proxmox URL: {proxmox_url}")
-            proxmox_host = host_match.group(1)
+            
+            # Simple parsing logic
+            if '://' in proxmox_url:
+                host = proxmox_url.split('://')[1].split(':')[0]
+            else:
+                host = proxmox_url.split(':')[0]
+                
+            proxmox_host = host
             
             # Connect to Proxmox API
             proxmox = ProxmoxAPI(
                 proxmox_host,
                 user=current_app.config['PROXMOX_USER'],
                 password=current_app.config['PROXMOX_PASSWORD'],
-                verify_ssl=False
+                verify_ssl=False,
+                timeout=5
             )
             
             node = current_app.config['PROXMOX_NODE']
@@ -661,15 +670,100 @@ class TerraformManager:
             logger.error(f"Error getting IP from Proxmox: {e}")
             raise
     
-    @staticmethod
-    def _generate_vm_id() -> int:
+    def _generate_vm_id(self) -> int:
         """
-        Generate a unique VM ID
+        Generate a unique VM ID by checking both Proxmox and the database
         
         Returns:
             Unique VM ID (100-999 range for safety)
         """
-        # In production, this should check existing VMs in Proxmox
-        # For now, generate a random ID
         import random
-        return random.randint(100, 999)
+        from backend.models.deployment import Deployment
+        
+        # Get VM IDs from the database
+        db_vm_ids = set(Deployment.get_used_vm_ids())
+        
+        # Get VM IDs from Proxmox
+        proxmox_vm_ids = set()
+        try:
+            proxmox_vm_ids = self._get_proxmox_vm_ids()
+        except Exception as e:
+            logger.warning(f"Could not fetch VM IDs from Proxmox: {e}")
+        
+        # Combine all used IDs
+        used_ids = db_vm_ids.union(proxmox_vm_ids)
+        
+        # Generate unique ID
+        max_attempts = 100
+        for _ in range(max_attempts):
+            vm_id = random.randint(100, 999)
+            if vm_id not in used_ids:
+                logger.info(f"Generated unique VM ID: {vm_id}")
+                return vm_id
+        
+        # If we can't find a random ID, use sequential search
+        for vm_id in range(100, 1000):
+            if vm_id not in used_ids:
+                logger.info(f"Generated sequential VM ID: {vm_id}")
+                return vm_id
+        
+        raise Exception("No available VM IDs in range 100-999")
+    
+    def _get_proxmox_vm_ids(self) -> set:
+        """
+        Get all existing VM/LXC IDs from Proxmox
+        
+        Returns:
+            Set of VM IDs currently in use on Proxmox
+        """
+        try:
+            from requests.packages.urllib3.exceptions import InsecureRequestWarning
+            import requests
+            
+            # Suppress SSL warnings
+            requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+            
+            proxmox_url = current_app.config['PROXMOX_URL']
+            
+            # Parse host from URL
+            if '://' in proxmox_url:
+                host = proxmox_url.split('://')[1].split(':')[0]
+            else:
+                host = proxmox_url.split(':')[0]
+            
+            # Connect to Proxmox API
+            proxmox = ProxmoxAPI(
+                host,
+                user=current_app.config['PROXMOX_USER'],
+                password=current_app.config['PROXMOX_PASSWORD'],
+                verify_ssl=False,
+                timeout=5
+            )
+            
+            node = current_app.config['PROXMOX_NODE']
+            vm_ids = set()
+            
+            # Get QEMU VMs
+            try:
+                qemu_vms = proxmox.nodes(node).qemu.get()
+                for vm in qemu_vms:
+                    if 'vmid' in vm:
+                        vm_ids.add(int(vm['vmid']))
+            except Exception as e:
+                logger.warning(f"Could not fetch QEMU VMs: {e}")
+            
+            # Get LXC containers
+            try:
+                lxc_containers = proxmox.nodes(node).lxc.get()
+                for ct in lxc_containers:
+                    if 'vmid' in ct:
+                        vm_ids.add(int(ct['vmid']))
+            except Exception as e:
+                logger.warning(f"Could not fetch LXC containers: {e}")
+            
+            logger.info(f"Found {len(vm_ids)} existing VM/LXC IDs in Proxmox")
+            return vm_ids
+            
+        except Exception as e:
+            logger.error(f"Error fetching VM IDs from Proxmox: {e}")
+            return set()

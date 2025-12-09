@@ -15,13 +15,7 @@
         <div class="container nav-container">
             <a href="/" class="logo">
                 <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-                    <path d="M16 4L4 10V22L16 28L28 22V10L16 4Z" stroke="url(#paint0_linear)" stroke-width="2" />
-                    <defs>
-                        <linearGradient id="paint0_linear" x1="4" y1="4" x2="28" y2="28">
-                            <stop stop-color="hsl(260, 80%, 60%)" />
-                            <stop offset="1" stop-color="hsl(200, 80%, 55%)" />
-                        </linearGradient>
-                    </defs>
+                    <path d="M16 4L4 10V22L16 28L28 22V10L16 4Z" stroke="hsl(212, 100%, 50%)" stroke-width="2" />
                 </svg>
                 PaaS Platform
             </a>
@@ -156,13 +150,19 @@
                     <div style="text-align: center;">
                         <div class="spinner" style="margin: 2rem auto;"></div>
                         <p id="progress-message">Initialisation du déploiement...</p>
-                        <ul id="progress-steps" style="text-align: left; max-width: 600px; margin: 1rem auto; list-style: none; padding: 0;">
-                            <li style="padding: 0.5rem; color: var(--text-secondary);">⏳ Génération de la configuration Terraform...</li>
-                            <li style="padding: 0.5rem; color: var(--text-secondary);">⏳ Provisionnement de l'infrastructure Proxmox...</li>
-                            <li style="padding: 0.5rem; color: var(--text-secondary);">⏳ Configuration SSH et attente de disponibilité...</li>
-                            <li style="padding: 0.5rem; color: var(--text-secondary);">⏳ Installation des dépendances système...</li>
+                        <ul id="progress-steps"
+                            style="text-align: left; max-width: 600px; margin: 1rem auto; list-style: none; padding: 0;">
+                            <li style="padding: 0.5rem; color: var(--text-secondary);">⏳ Génération de la configuration
+                                Terraform...</li>
+                            <li style="padding: 0.5rem; color: var(--text-secondary);">⏳ Provisionnement de
+                                l'infrastructure Proxmox...</li>
+                            <li style="padding: 0.5rem; color: var(--text-secondary);">⏳ Configuration SSH et attente de
+                                disponibilité...</li>
+                            <li style="padding: 0.5rem; color: var(--text-secondary);">⏳ Installation des dépendances
+                                système...</li>
                             <li style="padding: 0.5rem; color: var(--text-secondary);">⏳ Clonage du dépôt GitHub...</li>
-                            <li style="padding: 0.5rem; color: var(--text-secondary);">⏳ Déploiement de l'application...</li>
+                            <li style="padding: 0.5rem; color: var(--text-secondary);">⏳ Déploiement de l'application...
+                            </li>
                         </ul>
                     </div>
                 </div>

@@ -5,115 +5,126 @@ terraform {
   
   required_providers {
     proxmox = {
-      source  = "telmate/proxmox"
-      version = "2.9.10"  # Version compatible avec Proxmox 6.x (pas de VM.Monitor requis)
+      source  = "bpg/proxmox"
+      version = "0.46.1"
     }
   }
 }
 
 # Configure the Proxmox Provider
 provider "proxmox" {
-  pm_api_url      = var.proxmox_url
-  pm_user         = var.proxmox_user
-  pm_password     = var.proxmox_password
-  pm_tls_insecure = true
-  pm_log_enable   = true
-  pm_log_file     = "terraform-plugin-proxmox.log"
-  pm_debug        = true
-  pm_log_levels = {
-    _default    = "debug"
-    _capturelog = ""
-  }
+  endpoint = var.proxmox_url
+  username = var.proxmox_user
+  password = var.proxmox_password
+  insecure = true
+  
+  # Optional: API Token authentication is preferred if available
+  # api_token = "..."
 }
 
 # Conditional VM resource
-resource "proxmox_vm_qemu" "deployment_vm" {
+# Conditional VM resource
+resource "proxmox_virtual_environment_vm" "deployment_vm" {
   count = var.deployment_type == "vm" ? 1 : 0
   
-  name        = var.deployment_name
-  target_node = var.proxmox_node
-  vmid        = var.vm_id
+  name      = var.deployment_name
+  node_name = var.proxmox_node
+  vm_id     = var.vm_id
   
-  # Clone from cloud-init template or use ISO
-  clone = var.vm_template != "" ? var.vm_template : null
+  # Clone settings (if using template)
+  # For bpg provider, cloning is handled differently. 
+  # We will use a simple ISO boot or Template clone if specified.
   
-  # VM Settings
-  cores   = var.cores
-  sockets = 1
-  memory  = var.memory
+  cpu {
+    cores = var.cores
+    sockets = 1
+  }
+
+  memory {
+    dedicated = var.memory
+  }
   
-  # Network configuration
-  network {
-    model  = "virtio"
+  network_device {
     bridge = var.network_bridge
+    model  = "virtio"
   }
   
-  # Disk configuration
   disk {
-    type    = "scsi"
-    storage = var.proxmox_storage
-    size    = "${var.disk_size}G"
+    datastore_id = var.proxmox_storage
+    file_format  = "raw"
+    interface    = "scsi0"
+    size         = var.disk_size
   }
   
-  # Cloud-init settings
-  os_type   = "cloud-init"
-  ipconfig0 = "ip=dhcp"
-  
-  # SSH keys (join list into newline-separated string)
-  sshkeys = length(var.ssh_public_keys) > 0 ? join("\n", var.ssh_public_keys) : (var.ssh_public_key != "" ? var.ssh_public_key : null)
-  
-  # Start VM after creation
-  onboot = true
-  
-  # Lifecycle
-  lifecycle {
-    ignore_changes = [
-      network,
-      disk,
-    ]
+  operating_system {
+    type = "l26" # Linux 2.6+
+  }
+
+  initialization {
+    ip_config {
+      ipv4 {
+        address = "dhcp"
+      }
+    }
+    
+    user_account {
+      keys = length(var.ssh_public_keys) > 0 ? var.ssh_public_keys : (var.ssh_public_key != "" ? [var.ssh_public_key] : [])
+    }
   }
   
-  # Tags
-  tags = "paas,${var.framework},${var.deployment_type}"
+  started = true
 }
 
 # Conditional LXC resource
-resource "proxmox_lxc" "deployment_lxc" {
+# Conditional LXC resource
+resource "proxmox_virtual_environment_container" "deployment_lxc" {
   count = var.deployment_type == "lxc" ? 1 : 0
   
-  hostname    = var.deployment_name
-  target_node = var.proxmox_node
-  vmid        = var.vm_id
+  description = "Managed by PaaS Platform"
+  node_name   = var.proxmox_node
+  vm_id       = var.vm_id
   
-  # Container template (os_template already contains full volid like "local:vztmpl/ubuntu...")
-  ostemplate = var.os_template
-  
-  # Container resources
-  cores  = var.cores
-  memory = var.memory
-  swap   = var.memory / 2
-  
-  # Root filesystem
-  rootfs {
-    storage = var.proxmox_storage
-    size    = "${var.disk_size}G"
+  initialization {
+    hostname = var.deployment_name
+    
+    ip_config {
+      ipv4 {
+        address = "dhcp"
+      }
+    }
+    
+    user_account {
+      keys = length(var.ssh_public_keys) > 0 ? var.ssh_public_keys : (var.ssh_public_key != "" ? [var.ssh_public_key] : [])
+    }
   }
-  
-  # Network configuration
-  network {
+
+  network_interface {
     name   = "eth0"
     bridge = var.network_bridge
-    ip     = "dhcp"
   }
   
-  # Container settings
-  unprivileged = false
-  onboot       = true
-  start        = true
+  operating_system {
+    template_file_id = var.os_template
+    type             = "ubuntu" # or debian, etc.
+  }
+
+  # Container resources
+  cpu {
+    cores = var.cores
+  }
   
-  # SSH keys (preferred method)
-  ssh_public_keys = length(var.ssh_public_keys) > 0 ? join("\n", var.ssh_public_keys) : (var.ssh_public_key != "" ? var.ssh_public_key : null)
+  memory {
+    dedicated = var.memory
+    swap      = 512
+  }
   
-  # Tags
-  tags = "paas,${var.framework},${var.deployment_type}"
+  disk {
+    datastore_id = var.proxmox_storage
+    size         = var.disk_size
+  }
+  
+  unprivileged = true
+  started      = true
+  
+  tags = ["paas", var.framework, var.deployment_type]
 }

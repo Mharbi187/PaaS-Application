@@ -184,6 +184,19 @@ class DevelopmentConfig(Config):
 class ProductionConfig(Config):
     """Production configuration"""
     DEBUG = False
+    
+    @staticmethod
+    def init_app():
+        """Initialize production app with additional security checks"""
+        Config.init_app()
+        
+        # Enforce SECRET_KEY in production
+        secret_key = os.getenv('SECRET_KEY', '')
+        if not secret_key or secret_key == 'dev-secret-key-change-in-production':
+            raise ValueError(
+                "SECRET_KEY must be set to a secure value in production. "
+                "Generate one with: python -c \"import secrets; print(secrets.token_hex(32))\""
+            )
 
 
 class TestingConfig(Config):

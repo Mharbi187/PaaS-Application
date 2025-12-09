@@ -23,26 +23,25 @@ output "framework" {
 output "ip_address" {
   description = "IP address of the deployment"
   value = var.deployment_type == "vm" ? (
-    length(proxmox_vm_qemu.deployment_vm) > 0 ? 
-    try(proxmox_vm_qemu.deployment_vm[0].default_ipv4_address, "pending") : 
+    length(proxmox_virtual_environment_vm.deployment_vm) > 0 ? 
+    try(proxmox_virtual_environment_vm.deployment_vm[0].ipv4_addresses[1][0], "pending") : 
     "pending"
   ) : (
-    length(proxmox_lxc.deployment_lxc) > 0 ?
-    "Check Proxmox Console" : # LXC IP is hard to get via Terraform with DHCP
-    "pending"
+    # LXC IPs are not directly exported in the same way. 
+    # Since we use DHCP, we mark it as pending lookup.
+    "Pending (Check Dashboard)"
   )
 }
 
 output "access_url" {
   description = "Access URL for the deployed application"
   value = var.deployment_type == "vm" ? (
-    length(proxmox_vm_qemu.deployment_vm) > 0 ?
-    "http://${try(proxmox_vm_qemu.deployment_vm[0].default_ipv4_address, "pending")}:${var.framework_port}" :
+    length(proxmox_virtual_environment_vm.deployment_vm) > 0 ?
+    "http://${try(proxmox_virtual_environment_vm.deployment_vm[0].ipv4_addresses[1][0], "pending")}:${var.framework_port}" :
     "pending"
   ) : (
-    length(proxmox_lxc.deployment_lxc) > 0 ?
-    "http://<LXC_IP>:${var.framework_port}" :
-    "pending"
+    # Fallback for LXC
+    "http://<IP_PENDING>:${var.framework_port}"
   )
 }
 

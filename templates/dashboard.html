@@ -15,13 +15,7 @@
         <div class="container nav-container">
             <a href="/" class="logo">
                 <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-                    <path d="M16 4L4 10V22L16 28L28 22V10L16 4Z" stroke="url(#paint0_linear)" stroke-width="2" />
-                    <defs>
-                        <linearGradient id="paint0_linear" x1="4" y1="4" x2="28" y2="28">
-                            <stop stop-color="hsl(260, 80%, 60%)" />
-                            <stop offset="1" stop-color="hsl(200, 80%, 55%)" />
-                        </linearGradient>
-                    </defs>
+                    <path d="M16 4L4 10V22L16 28L28 22V10L16 4Z" stroke="hsl(212, 100%, 50%)" stroke-width="2" />
                 </svg>
                 PaaS Platform
             </a>
@@ -49,15 +43,15 @@
                 </div>
                 <div class="card">
                     <p style="color: var(--text-secondary); margin-bottom: 0.5rem;">En cours</p>
-                    <h2 style="color: hsl(145, 63%, 59%);" id="stat-running">0</h2>
+                    <h2 style="color: hsl(160, 84%, 39%);" id="stat-running">0</h2>
                 </div>
                 <div class="card">
                     <p style="color: var(--text-secondary); margin-bottom: 0.5rem;">Échoués</p>
-                    <h2 style="color: hsl(357, 100%, 64%);" id="stat-failed">0</h2>
+                    <h2 style="color: hsl(350, 80%, 60%);" id="stat-failed">0</h2>
                 </div>
                 <div class="card">
                     <p style="color: var(--text-secondary); margin-bottom: 0.5rem;">Taux de Réussite</p>
-                    <h2 style="color: hsl(200, 80%, 55%);" id="stat-success-rate">100%</h2>
+                    <h2 style="color: hsl(212, 100%, 50%);" id="stat-success-rate">100%</h2>
                 </div>
             </div>
 
@@ -85,13 +79,13 @@
     <script>
         // Status badge colors
         const STATUS_COLORS = {
-            pending: 'hsl(43, 100%, 60%)',
-            provisioning: 'hsl(200, 80%, 55%)',
-            deploying: 'hsl(200, 80%, 55%)',
-            running: 'hsl(145, 63%, 59%)',
-            failed: 'hsl(357, 100%, 64%)',
-            stopped: 'hsl(0, 0%, 60%)',
-            deleted: 'hsl(0, 0%, 40%)'
+            pending: 'hsl(45, 90%, 50%)',       // Professional Orange/Yellow
+            provisioning: 'hsl(212, 100%, 50%)', // Primary Blue
+            deploying: 'hsl(212, 100%, 50%)',    // Primary Blue
+            running: 'hsl(160, 84%, 39%)',       // Professional Emerald
+            failed: 'hsl(350, 80%, 60%)',        // Soft Red
+            stopped: 'hsl(215, 20%, 50%)',       // Muted Slate
+            deleted: 'hsl(215, 20%, 40%)'        // Dark Slate
         };
 
         // Status icons
@@ -278,10 +272,109 @@
         // Auto-refresh every 30 seconds
         setInterval(loadDeployments, 30000);
 
+        // Load Infrastructure for Dashboard
+        async function loadDashboardInfrastructure() {
+            const container = document.getElementById('dashboard-nodes-container');
+
+            try {
+                // Get Nodes
+                const nodesRes = await fetch('/api/proxmox/nodes');
+                const nodesData = await nodesRes.json();
+
+                if (!nodesData.success) throw new Error(nodesData.error);
+
+                container.innerHTML = '';
+
+                for (const node of nodesData.nodes) {
+                    const nodeSection = document.createElement('div');
+
+                    // Get VMs for this node
+                    const vmsRes = await fetch(`/api/proxmox/nodes/${node.node}/vms`);
+                    const vmsData = await vmsRes.json();
+
+                    const vmsList = vmsData.resources.map(vm => `
+                        <tr style="border-bottom: 1px solid var(--border); transition: background 0.2s;">
+                            <td style="padding: 0.75rem 1rem;">
+                                <span style="font-family: monospace; color: var(--text-secondary);">${vm.id}</span>
+                            </td>
+                            <td style="padding: 0.75rem 1rem; font-weight: 500;">
+                                ${vm.name}
+                            </td>
+                            <td style="padding: 0.75rem 1rem;">
+                                <span style="
+                                    background: ${vm.type === 'lxc' ? 'hsla(340, 80%, 60%, 0.1)' : 'hsla(212, 100%, 50%, 0.1)'};
+                                    color: ${vm.type === 'lxc' ? 'hsl(340, 80%, 60%)' : 'hsl(212, 100%, 50%)'};
+                                    padding: 0.2rem 0.5rem;
+                                    border-radius: 4px;
+                                    font-size: 0.75rem;
+                                    font-weight: 600;
+                                ">${vm.type.toUpperCase()}</span>
+                            </td>
+                            <td style="padding: 0.75rem 1rem;">
+                                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <div style="width: 8px; height: 8px; border-radius: 50%; background: ${vm.status === 'running' ? 'hsl(160, 84%, 39%)' : 'hsl(215, 20%, 50%)'};"></div>
+                                    <span style="color: ${vm.status === 'running' ? 'var(--text-primary)' : 'var(--text-secondary)'}">
+                                        ${vm.status}
+                                    </span>
+                                </div>
+                            </td>
+                            <td style="padding: 0.75rem 1rem; color: var(--text-secondary); font-size: 0.9rem;">
+                                ${Math.round(vm.memory / 1024 / 1024)} MB
+                            </td>
+                        </tr>
+                    `).join('');
+
+                    nodeSection.innerHTML = `
+                        <div style="margin-bottom: 1rem;">
+                            <div style="display: flex; gap: 1rem; margin-bottom: 1rem; align-items: baseline;">
+                                <h3 style="margin: 0; font-size: 1.1rem; color: var(--primary-light);">📦 Node: ${node.node}</h3>
+                                <span style="font-size: 0.9rem; color: var(--text-secondary);">CPU Usage: ${(node.cpu * 100).toFixed(1)}%</span>
+                            </div>
+                            
+                            <div style="border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden;">
+                                <table style="width: 100%; border-collapse: collapse;">
+                                    <thead style="background: rgba(0,0,0,0.2);">
+                                        <tr style="text-align: left; color: var(--text-secondary); font-size: 0.85rem;">
+                                            <th style="padding: 0.75rem 1rem;">ID</th>
+                                            <th style="padding: 0.75rem 1rem;">Name</th>
+                                            <th style="padding: 0.75rem 1rem;">Type</th>
+                                            <th style="padding: 0.75rem 1rem;">Status</th>
+                                            <th style="padding: 0.75rem 1rem;">Memory</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${vmsList.length ? vmsList : '<tr><td colspan="5" style="padding: 1rem; text-align: center; color: var(--text-secondary);">Aucune ressource trouvée</td></tr>'}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    `;
+
+                    container.appendChild(nodeSection);
+                }
+
+                // Update time
+                const now = new Date();
+                document.getElementById('infra-last-update').textContent = `MàJ: ${now.toLocaleTimeString()}`;
+
+            } catch (error) {
+                console.error('Infrastructure load error:', error);
+                container.innerHTML = `
+                    <div class="alert alert-error" style="margin: 0;">
+                        Erreur de connexion à Proxmox: ${error.message}
+                    </div>
+                `;
+            }
+        }
+
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
             loadStats();
             loadDeployments();
+            loadDashboardInfrastructure();
+
+            // Refresh infra every 30s
+            setInterval(loadDashboardInfrastructure, 30000);
         });
     </script>
 </body>
