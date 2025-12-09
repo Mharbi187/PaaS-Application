@@ -227,10 +227,35 @@ class TerraformManager:
             if return_code == 1:
                 error_msg = stderr.decode() if isinstance(stderr, bytes) else stderr
                 stdout_msg = stdout.decode() if isinstance(stdout, bytes) else stdout
-                logger.error(f"Terraform plan failed. Return code: {return_code}")
-                logger.error(f"STDOUT: {stdout_msg}")
-                logger.error(f"STDERR: {error_msg}")
-                raise Exception(f"Terraform plan failed: {error_msg}\nOutput: {stdout_msg}")
+                
+                # Check for "VM not found" error which indicates state drift
+                if "vm" in error_msg and "not found" in error_msg:
+                    logger.warning(f"State drift detected (VM not found). Attempting to clean state for {deployment_name}")
+                    
+                    # Try to remove the resource from state
+                    resource_addr = "proxmox_lxc.deployment_lxc[0]" if config['deployment_type'] == 'lxc' else "proxmox_vm_qemu.deployment_vm[0]"
+                    
+                    logger.info(f"Removing {resource_addr} from state...")
+                    self.tf.cmd('state', 'rm', resource_addr, capture_output=True)
+                    
+                    # Retry plan
+                    logger.info("Retrying Terraform plan...")
+                    return_code, stdout, stderr = self.tf.plan(
+                        var_file=relative_var_file,
+                        capture_output=True
+                    )
+                    
+                    if return_code == 1:
+                        # If still failing, raise error
+                        error_msg = stderr.decode() if isinstance(stderr, bytes) else stderr
+                        stdout_msg = stdout.decode() if isinstance(stdout, bytes) else stdout
+                        logger.error(f"Terraform retry plan failed: {error_msg}")
+                        raise Exception(f"Terraform plan failed after retry: {error_msg}\nOutput: {stdout_msg}")
+                else:
+                    logger.error(f"Terraform plan failed. Return code: {return_code}")
+                    logger.error(f"STDOUT: {stdout_msg}")
+                    logger.error(f"STDERR: {error_msg}")
+                    raise Exception(f"Terraform plan failed: {error_msg}\nOutput: {stdout_msg}")
             
             logger.info(f"Terraform plan succeeded. Resources to {'add' if return_code == 2 else 'maintain'}")
             
