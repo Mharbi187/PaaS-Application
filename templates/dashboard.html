@@ -59,9 +59,15 @@
             <div class="card">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
                     <h2>Mes Déploiements</h2>
-                    <button onclick="loadDeployments()" class="btn btn-secondary" style="padding: 0.5rem 1rem;">
-                        🔄 Actualiser
-                    </button>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button onclick="syncFromProxmox()" class="btn btn-secondary" style="padding: 0.5rem 1rem;"
+                            title="Import existing VMs/LXCs from Proxmox">
+                            📥 Sync Proxmox
+                        </button>
+                        <button onclick="loadDeployments()" class="btn btn-secondary" style="padding: 0.5rem 1rem;">
+                            🔄 Actualiser
+                        </button>
+                    </div>
                 </div>
 
                 <div id="deployments-container">
@@ -98,6 +104,96 @@
             stopped: '⏸️',
             deleted: '🗑️'
         };
+
+        // Framework default ports
+        const FRAMEWORK_PORTS = {
+            django: 8000,
+            laravel: 8000,
+            express: 3000,
+            flask: 5000,
+            fastapi: 8000,
+            react: 3000,
+            vuejs: 8080,
+            nextjs: 3000,
+            unknown: 80
+        };
+
+        // Get framework port
+        function getFrameworkPort(framework) {
+            return FRAMEWORK_PORTS[framework] || 80;
+        }
+
+        // Copy to clipboard
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                showNotification('✅ IP copied to clipboard: ' + text);
+            }).catch(err => {
+                // Fallback for older browsers
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                showNotification('✅ IP copied to clipboard: ' + text);
+            });
+        }
+
+        // Open SSH connection (shows command to copy)
+        function openSSH(ip) {
+            const sshCommand = `ssh root@${ip}`;
+
+            // Try to copy to clipboard
+            navigator.clipboard.writeText(sshCommand).then(() => {
+                showNotification('📋 SSH command copied: ' + sshCommand);
+            }).catch(() => {
+                // Show modal with command
+                alert('SSH Command:\n\n' + sshCommand + '\n\nCopy this command and paste it in your terminal.');
+            });
+
+            // Attempt to open SSH URL (works on some systems with ssh:// handler)
+            // window.open(`ssh://root@${ip}`, '_blank');
+        }
+
+        // Show notification
+        function showNotification(message) {
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                bottom: 20px;
+                right: 20px;
+                background: var(--surface-elevated);
+                border: 1px solid var(--border);
+                padding: 1rem 1.5rem;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                z-index: 10000;
+                animation: slideIn 0.3s ease;
+                color: var(--text-primary);
+            `;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+
+            // Add animation keyframes if not exists
+            if (!document.querySelector('#notification-styles')) {
+                const style = document.createElement('style');
+                style.id = 'notification-styles';
+                style.textContent = `
+                    @keyframes slideIn {
+                        from { transform: translateX(100%); opacity: 0; }
+                        to { transform: translateX(0); opacity: 1; }
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+
+            // Remove after 3 seconds
+            setTimeout(() => {
+                notification.style.animation = 'slideIn 0.3s ease reverse';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
 
         // Load statistics
         async function loadStats() {
@@ -190,7 +286,30 @@
                                 </td>
                                 <td style="padding: 1rem;">
                                     ${deployment.ip_address ?
-                                    `<a href="http://${deployment.ip_address}" target="_blank" style="color: var(--primary);">${deployment.ip_address}</a>` :
+                                    `<div class="ip-actions" style="position: relative;">
+                                        <a href="http://${deployment.ip_address}:${getFrameworkPort(deployment.framework)}" 
+                                           target="_blank" 
+                                           style="color: var(--primary); font-family: monospace;"
+                                           title="Open in browser (port ${getFrameworkPort(deployment.framework)})">${deployment.ip_address}</a>
+                                        <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+                                            <button onclick="copyToClipboard('${deployment.ip_address}')" 
+                                                    class="ip-btn" title="Copy IP"
+                                                    style="padding: 0.25rem 0.5rem; font-size: 0.75rem; background: var(--surface-elevated); border: 1px solid var(--border); border-radius: 4px; cursor: pointer; color: var(--text-secondary);">
+                                                📋
+                                            </button>
+                                            <button onclick="openSSH('${deployment.ip_address}')" 
+                                                    class="ip-btn" title="SSH Command"
+                                                    style="padding: 0.25rem 0.5rem; font-size: 0.75rem; background: var(--surface-elevated); border: 1px solid var(--border); border-radius: 4px; cursor: pointer; color: var(--text-secondary);">
+                                                🔗 SSH
+                                            </button>
+                                            <a href="http://${deployment.ip_address}:${getFrameworkPort(deployment.framework)}" 
+                                               target="_blank"
+                                               style="padding: 0.25rem 0.5rem; font-size: 0.75rem; background: var(--surface-elevated); border: 1px solid var(--border); border-radius: 4px; cursor: pointer; color: var(--text-secondary); text-decoration: none;"
+                                               title="Open App">
+                                                🌐 Open
+                                            </a>
+                                        </div>
+                                    </div>` :
                                     '<span style="color: var(--text-secondary);">N/A</span>'}
                                 </td>
                                 <td style="padding: 1rem;">
@@ -242,6 +361,38 @@
             // For now, just log the ID
             console.log('View deployment:', id);
             alert('Fonctionnalité à venir: Afficher les détails du déploiement ' + id);
+        }
+
+        // Sync from Proxmox
+        async function syncFromProxmox() {
+            const btn = event.target;
+            const originalText = btn.textContent;
+            btn.textContent = '⏳ Syncing...';
+            btn.disabled = true;
+
+            try {
+                const response = await fetch('/api/proxmox/sync', {
+                    method: 'POST'
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showNotification(`✅ ${data.message}`);
+                    if (data.imported_count > 0) {
+                        loadDeployments();
+                        loadStats();
+                    }
+                } else {
+                    showNotification('❌ Sync failed: ' + data.error);
+                }
+            } catch (error) {
+                console.error('Error syncing from Proxmox:', error);
+                showNotification('❌ Sync error: ' + error.message);
+            } finally {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }
         }
 
         // Delete deployment
