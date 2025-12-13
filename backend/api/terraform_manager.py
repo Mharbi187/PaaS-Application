@@ -330,10 +330,11 @@ class TerraformManager:
             # Convert to relative path
             relative_var_file = var_file.relative_to(self.terraform_dir).as_posix()
             
-            # Destroy
-            return_code, stdout, stderr = self.tf.destroy(
-                var_file=relative_var_file,
-                auto_approve=True,
+            # Destroy using direct command to ensure -auto-approve is used (not deprecated -force)
+            return_code, stdout, stderr = self.tf.cmd(
+                'destroy',
+                f'-var-file={relative_var_file}',
+                '-auto-approve',
                 capture_output=True
             )
             
@@ -470,79 +471,175 @@ class TerraformManager:
         commands = []
         
         # Helper to wait for apt lock
-        wait_for_lock = "while fuser /var/lib/dpkg/lock >/dev/null 2>&1 || fuser /var/lib/apt/lists/lock >/dev/null 2>&1; do echo 'Waiting for lock...'; sleep 1; done;"
+        wait_for_lock = "while fuser /var/lib/dpkg/lock >/dev/null 2>&1 || fuser /var/lib/apt/lists/lock >/dev/null 2>&1 || fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do echo 'Waiting for apt lock...'; sleep 2; done"
         
-        # Base setup - Chain commands to persist environment and ensure sequential execution
-        base_cmd = f"export DEBIAN_FRONTEND=noninteractive && {wait_for_lock} apt-get update && {wait_for_lock} apt-get install -y apt-utils git curl build-essential"
+        # Step 1: Update system and install base dependencies
+        base_cmd = (
+            f"export DEBIAN_FRONTEND=noninteractive && "
+            f"{wait_for_lock} && "
+            f"apt-get update -y && "
+            f"{wait_for_lock} && "
+            f"apt-get install -y apt-utils git curl wget build-essential"
+        )
         commands.append(base_cmd)
         
-        # Language-specific installation
+        # Step 2: Language-specific installation
         if language == 'nodejs':
             node_cmd = (
-                f"export DEBIAN_FRONTEND=noninteractive && {wait_for_lock} "
-                "curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && "
-                f"{wait_for_lock} apt-get install -y nodejs"
+                f"export DEBIAN_FRONTEND=noninteractive && "
+                f"{wait_for_lock} && "
+                f"curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && "
+                f"{wait_for_lock} && "
+                f"apt-get install -y nodejs && "
+                f"npm install -g pm2 serve"
             )
             commands.append(node_cmd)
             
         elif language == 'python':
-            py_cmd = f"export DEBIAN_FRONTEND=noninteractive && {wait_for_lock} apt-get install -y python3 python3-pip"
+            py_cmd = (
+                f"export DEBIAN_FRONTEND=noninteractive && "
+                f"{wait_for_lock} && "
+                f"apt-get install -y python3 python3-pip python3-venv"
+            )
             commands.append(py_cmd)
             
         elif language == 'php':
-            php_cmd = f"export DEBIAN_FRONTEND=noninteractive && {wait_for_lock} apt-get install -y php php-cli php-fpm php-mysql composer"
+            php_cmd = (
+                f"export DEBIAN_FRONTEND=noninteractive && "
+                f"{wait_for_lock} && "
+                f"apt-get install -y php php-cli php-fpm php-mysql php-xml php-mbstring composer"
+            )
             commands.append(php_cmd)
         
-        # Application setup
-        # Clean up previous app dir if exists
-        commands.append('rm -rf /opt/app')
+        # Step 3: Create app directory and clone repository
+        commands.append('rm -rf /opt/app && mkdir -p /opt/app')
+        commands.append(f'git clone --depth 1 {github_url} /opt/app')
         
-        # Clone repository
-        commands.append(f'git clone {github_url} /opt/app')
+        # Step 3.5: Fix Windows line endings (CRLF -> LF) for repos created on Windows
+        commands.append(
+            'apt-get install -y dos2unix && '
+            'find /opt/app -type f \\( -name "*.js" -o -name "*.py" -o -name "*.sh" -o -name "*.json" -o -name "*.txt" -o -name "*.md" -o -name "*.html" -o -name "*.css" -o -name "*.yml" -o -name "*.yaml" -o -name "*.env*" -o -name "Dockerfile*" -o -name "*.ts" -o -name "*.tsx" -o -name "*.jsx" \\) -exec dos2unix {} \\; 2>/dev/null || true'
+        )
         
-        # Create .env file if env_vars provided
+        # Step 4: Create .env file if env_vars provided
         if env_vars:
-            env_content = '\\n'.join([f'{k}={v}' for k, v in env_vars.items()])
-            commands.append(f'cat > /opt/app/.env << EOF\\n{env_content}\\nEOF')
+            env_lines = []
+            for k, v in env_vars.items():
+                env_lines.append(f'{k}={v}')
+            env_content = '\\n'.join(env_lines)
+            commands.append(f'echo -e "{env_content}" > /opt/app/.env')
         
-        # Install dependencies and start based on framework
-        start_script = ""
-        
+        # Step 5: Install dependencies and start application based on framework
         if framework == 'react':
-            start_script = (
-                "cd /opt/app && npm install && npm run build && "
-                "npm install -g serve && "
-                "nohup serve -s build -l 3000 > /var/log/app.log 2>&1 &"
+            # React: Install, build, serve with PM2
+            install_and_start = (
+                "cd /opt/app && "
+                "npm install --legacy-peer-deps 2>&1 | tail -20 && "
+                "npm run build 2>&1 | tail -20 && "
+                "pm2 delete react-app 2>/dev/null || true && "
+                f"pm2 serve build {port} --name react-app --spa && "
+                "pm2 save"
             )
-        elif framework in ['express', 'nextjs']:
-            start_script = (
-                "cd /opt/app && npm install && "
-                "nohup npm start > /var/log/app.log 2>&1 &"
-            )
-        elif framework == 'django':
-            start_script = (
-                "cd /opt/app && pip3 install -r requirements.txt && "
-                "nohup python3 manage.py runserver 0.0.0.0:8000 > /var/log/app.log 2>&1 &"
-            )
-        elif framework == 'flask':
-            start_script = (
-                "cd /opt/app && pip3 install -r requirements.txt && "
-                "nohup python3 app.py > /var/log/app.log 2>&1 &"
-            )
-        elif framework == 'laravel':
-            start_script = (
-                "cd /opt/app && composer install && "
-                "php artisan key:generate && "
-                "nohup php artisan serve --host=0.0.0.0 --port=8000 > /var/log/app.log 2>&1 &"
-            )
-        else:
-            # Generic Node.js app
-            start_script = (
-                "cd /opt/app && npm install && "
-                "nohup npm start > /var/log/app.log 2>&1 &"
-            )
+            commands.append(install_and_start)
             
-        commands.append(start_script)
+        elif framework == 'vuejs':
+            # Vue.js: Install, build, serve with PM2
+            install_and_start = (
+                "cd /opt/app && "
+                "npm install --legacy-peer-deps 2>&1 | tail -20 && "
+                "npm run build 2>&1 | tail -20 && "
+                "pm2 delete vue-app 2>/dev/null || true && "
+                f"pm2 serve dist {port} --name vue-app --spa && "
+                "pm2 save"
+            )
+            commands.append(install_and_start)
+            
+        elif framework == 'nextjs':
+            # Next.js: Install, build, start with PM2
+            install_and_start = (
+                "cd /opt/app && "
+                "npm install --legacy-peer-deps 2>&1 | tail -20 && "
+                "npm run build 2>&1 | tail -20 && "
+                "pm2 delete nextjs-app 2>/dev/null || true && "
+                "pm2 start npm --name nextjs-app -- start && "
+                "pm2 save"
+            )
+            commands.append(install_and_start)
+            
+        elif framework == 'express':
+            # Express.js: Install and start with PM2
+            install_and_start = (
+                "cd /opt/app && "
+                "npm install 2>&1 | tail -20 && "
+                "pm2 delete express-app 2>/dev/null || true && "
+                "pm2 start npm --name express-app -- start && "
+                "pm2 save"
+            )
+            commands.append(install_and_start)
+            
+        elif framework == 'django':
+            # Django: Create venv, install deps, run with gunicorn
+            install_and_start = (
+                "cd /opt/app && "
+                "python3 -m venv venv && "
+                "source venv/bin/activate && "
+                "pip install --upgrade pip && "
+                "pip install -r requirements.txt gunicorn 2>&1 | tail -20 && "
+                "python manage.py migrate --noinput 2>&1 || true && "
+                "python manage.py collectstatic --noinput 2>&1 || true && "
+                f"nohup venv/bin/gunicorn --bind 0.0.0.0:{port} --workers 2 --daemon --access-logfile /var/log/app-access.log --error-logfile /var/log/app-error.log $(find . -name 'wsgi.py' | head -1 | sed 's|./||;s|/|.|g;s|.py||'):application"
+            )
+            commands.append(install_and_start)
+            
+        elif framework == 'flask':
+            # Flask: Create venv, install deps, run with gunicorn
+            install_and_start = (
+                "cd /opt/app && "
+                "python3 -m venv venv && "
+                "source venv/bin/activate && "
+                "pip install --upgrade pip && "
+                "pip install -r requirements.txt gunicorn 2>&1 | tail -20 && "
+                f"nohup venv/bin/gunicorn --bind 0.0.0.0:{port} --workers 2 --daemon --access-logfile /var/log/app-access.log --error-logfile /var/log/app-error.log app:app"
+            )
+            commands.append(install_and_start)
+            
+        elif framework == 'fastapi':
+            # FastAPI: Create venv, install deps, run with uvicorn
+            install_and_start = (
+                "cd /opt/app && "
+                "python3 -m venv venv && "
+                "source venv/bin/activate && "
+                "pip install --upgrade pip && "
+                "pip install -r requirements.txt uvicorn 2>&1 | tail -20 && "
+                f"nohup venv/bin/uvicorn main:app --host 0.0.0.0 --port {port} > /var/log/app.log 2>&1 &"
+            )
+            commands.append(install_and_start)
+            
+        elif framework == 'laravel':
+            # Laravel: Install composer deps, setup
+            install_and_start = (
+                "cd /opt/app && "
+                "composer install --no-dev --optimize-autoloader 2>&1 | tail -20 && "
+                "cp .env.example .env 2>/dev/null || true && "
+                "php artisan key:generate 2>&1 || true && "
+                "php artisan migrate --force 2>&1 || true && "
+                f"nohup php artisan serve --host=0.0.0.0 --port={port} > /var/log/app.log 2>&1 &"
+            )
+            commands.append(install_and_start)
+            
+        else:
+            # Generic Node.js app: Install and start with PM2
+            install_and_start = (
+                "cd /opt/app && "
+                "npm install 2>&1 | tail -20 && "
+                "pm2 delete app 2>/dev/null || true && "
+                "pm2 start npm --name app -- start && "
+                "pm2 save"
+            )
+            commands.append(install_and_start)
+        
+        # Step 6: Verify app is running (optional status check)
+        commands.append("sleep 3 && (pm2 list 2>/dev/null || ps aux | grep -E 'gunicorn|uvicorn|node|php' | grep -v grep | head -5)")
         
         return commands
     

@@ -1,8 +1,3 @@
-"""
-Deployment Model - SQLAlchemy ORM
-Represents a deployment in the PaaS platform
-"""
-
 from enum import Enum
 from datetime import datetime
 from typing import Dict, Any, List, Optional

@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description"
         content="Plateforme PaaS privée pour le déploiement automatique d'applications sur Proxmox">
-    <title>PaaS Platform - Accueil</title>
+    <title>PaaS Platform - Déploiement Cloud Simplifié</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 
@@ -15,13 +15,22 @@
     <nav class="navbar">
         <div class="container nav-container">
             <a href="/" class="logo">
-                <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-                    <path d="M16 4L4 10V22L16 28L28 22V10L16 4Z" stroke="hsl(212, 100%, 50%)" stroke-width="2" />
+                <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+                    <defs>
+                        <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#667eea" />
+                            <stop offset="100%" style="stop-color:#764ba2" />
+                        </linearGradient>
+                    </defs>
+                    <path d="M20 5L5 13V27L20 35L35 27V13L20 5Z" stroke="url(#logoGrad)" stroke-width="2.5"
+                        fill="none" />
+                    <circle cx="20" cy="20" r="6" fill="url(#logoGrad)" opacity="0.3" />
+                    <circle cx="20" cy="20" r="3" fill="url(#logoGrad)" />
                 </svg>
-                PaaS Platform
+                CloudDeploy
             </a>
             <ul class="nav-links">
-                <li><a href="/">Accueil</a></li>
+                <li><a href="/" class="active">Accueil</a></li>
                 <li><a href="/deploy">Nouveau Déploiement</a></li>
                 <li><a href="/dashboard">Tableau de Bord</a></li>
             </ul>
@@ -29,36 +38,36 @@
     </nav>
 
     <!-- Hero Section -->
-    <section class="section" style="padding-top: 100px;">
+    <section class="hero">
         <div class="container">
-            <div style="max-width: 900px; margin: 0 auto; text-align: center;">
-                <h1 class="fade-in">
-                    Déployez vos applications
-                    <span class="text-gradient">en quelques clics</span>
-                </h1>
-                <p class="slide-up" style="font-size: 1.25rem; margin-bottom: 2rem; animation-delay: 0.2s;">
-                    Une plateforme PaaS privée basée sur Proxmox pour déployer automatiquement
-                    vos applications Django, Laravel, Node.js et plus encore.
+            <div class="hero-content fade-in">
+                <h1>Déployez vos Applications<br>en un Clic</h1>
+                <p class="hero-subtitle">
+                    Plateforme PaaS privée propulsée par Proxmox. Déployez Django, Laravel, React,
+                    Node.js et plus encore en quelques minutes.
                 </p>
-                <div class="slide-up"
-                    style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; animation-delay: 0.4s;">
-                    <a href="/deploy" class="btn btn-primary">Commencer un Déploiement</a>
-                    <a href="/dashboard" class="btn btn-secondary">Voir les Déploiements</a>
+                <div class="hero-actions">
+                    <a href="/deploy" class="btn btn-primary">
+                        🚀 Commencer un Déploiement
+                    </a>
+                    <a href="/dashboard" class="btn btn-secondary">
+                        📊 Voir le Dashboard
+                    </a>
                 </div>
 
-                <!-- Stats -->
-                <div class="grid grid-3 mt-3" id="stats-grid">
-                    <div class="card">
-                        <h3 class="text-gradient" id="total-deployments">0</h3>
-                        <p>Déploiements Total</p>
+                <!-- Stats Cards -->
+                <div class="grid grid-3" id="stats-grid">
+                    <div class="card stat-card">
+                        <div class="stat-value" id="total-deployments">0</div>
+                        <div class="stat-label">Déploiements Total</div>
                     </div>
-                    <div class="card">
-                        <h3 class="text-gradient" id="active-deployments">0</h3>
-                        <p>Déploiements Actifs</p>
+                    <div class="card stat-card">
+                        <div class="stat-value success" id="active-deployments">0</div>
+                        <div class="stat-label">Applications Actives</div>
                     </div>
-                    <div class="card">
-                        <h3 class="text-gradient" id="success-rate">100%</h3>
-                        <p>Taux de Réussite</p>
+                    <div class="card stat-card">
+                        <div class="stat-value" id="success-rate">100%</div>
+                        <div class="stat-label">Taux de Réussite</div>
                     </div>
                 </div>
             </div>
@@ -68,45 +77,44 @@
     <!-- Features Section -->
     <section class="section">
         <div class="container">
-            <h2 class="text-center mb-3">Fonctionnalités Principales</h2>
+            <h2 class="text-center mb-3">Pourquoi Choisir CloudDeploy ?</h2>
 
             <div class="grid grid-3">
-                <div class="card">
-                    <div style="font-size: 3rem; margin-bottom: 1rem;">🚀</div>
-                    <h3>Déploiement Rapide</h3>
-                    <p>Déployez vos applications en quelques minutes grâce à l'automatisation complète avec Terraform.
-                    </p>
+                <div class="card fade-in" style="animation-delay: 0.1s">
+                    <div class="feature-icon">🚀</div>
+                    <h3>Déploiement Ultra-Rapide</h3>
+                    <p>Infrastructure provisionnée automatiquement avec Terraform. De zéro à production en minutes.</p>
                 </div>
 
-                <div class="card">
-                    <div style="font-size: 3rem; margin-bottom: 1rem;">🔧</div>
+                <div class="card fade-in" style="animation-delay: 0.2s">
+                    <div class="feature-icon">🔧</div>
                     <h3>Multi-Framework</h3>
-                    <p>Support pour Django, Laravel, Express.js, React, Vue.js et de nombreux autres frameworks.</p>
+                    <p>Django, Laravel, Express, React, Vue.js, Next.js, FastAPI et bien plus supportés nativement.</p>
                 </div>
 
-                <div class="card">
-                    <div style="font-size: 3rem; margin-bottom: 1rem;">📦</div>
-                    <h3>VM ou LXC</h3>
-                    <p>Choisissez entre des machines virtuelles complètes ou des conteneurs légers selon vos besoins.
-                    </p>
+                <div class="card fade-in" style="animation-delay: 0.3s">
+                    <div class="feature-icon">📦</div>
+                    <h3>VM ou Conteneur LXC</h3>
+                    <p>Choisissez entre isolation complète (VM) ou performance maximale (LXC) selon vos besoins.</p>
                 </div>
 
-                <div class="card">
-                    <div style="font-size: 3rem; margin-bottom: 1rem;">🔗</div>
+                <div class="card fade-in" style="animation-delay: 0.4s">
+                    <div class="feature-icon">🔗</div>
                     <h3>Intégration GitHub</h3>
-                    <p>Déployez directement depuis vos dépôts GitHub publics ou privés.</p>
+                    <p>Déployez directement depuis vos dépôts GitHub. Push to deploy en toute simplicité.</p>
                 </div>
 
-                <div class="card">
-                    <div style="font-size: 3rem; margin-bottom: 1rem;">📊</div>
-                    <h3>Gestion Simplifiée</h3>
-                    <p>Interface intuitive pour gérer tous vos déploiements depuis un seul endroit.</p>
+                <div class="card fade-in" style="animation-delay: 0.5s">
+                    <div class="feature-icon">📊</div>
+                    <h3>Dashboard Intuitif</h3>
+                    <p>Gérez tous vos déploiements, surveillez les ressources et accédez à vos apps depuis un seul
+                        endroit.</p>
                 </div>
 
-                <div class="card">
-                    <div style="font-size: 3rem; margin-bottom: 1rem;">🔒</div>
-                    <h3>Sécurisé</h3>
-                    <p>Infrastructure privée avec isolation complète entre les déploiements.</p>
+                <div class="card fade-in" style="animation-delay: 0.6s">
+                    <div class="feature-icon">🔒</div>
+                    <h3>Infrastructure Privée</h3>
+                    <p>Vos données restent sur votre infrastructure. Isolation complète entre les déploiements.</p>
                 </div>
             </div>
         </div>
@@ -116,9 +124,8 @@
     <section class="section">
         <div class="container">
             <h2 class="text-center mb-3">Frameworks Supportés</h2>
-
             <div class="grid grid-4" id="frameworks-grid">
-                <!-- Frameworks will be loaded dynamically -->
+                <!-- Frameworks loaded dynamically -->
             </div>
         </div>
     </section>
@@ -126,22 +133,23 @@
     <!-- CTA Section -->
     <section class="section">
         <div class="container">
-            <div class="card" style="text-align: center; padding: 3rem;">
-                <h2 class="mb-2">Prêt à déployer votre première application ?</h2>
-                <p style="font-size: 1.125rem; margin-bottom: 2rem;">
-                    Commencez maintenant et déployez votre application en quelques minutes.
+            <div class="card card-glow" style="text-align: center; padding: 4rem 2rem;">
+                <h2 class="mb-2">Prêt à Déployer ?</h2>
+                <p
+                    style="font-size: 1.125rem; margin-bottom: 2rem; max-width: 500px; margin-left: auto; margin-right: auto;">
+                    Lancez votre première application en quelques clics. Aucune configuration complexe requise.
                 </p>
-                <a href="/deploy" class="btn btn-primary">Créer un Déploiement</a>
+                <a href="/deploy" class="btn btn-primary">
+                    🚀 Créer un Déploiement
+                </a>
             </div>
         </div>
     </section>
 
     <!-- Footer -->
-    <footer style="padding: 2rem 0; text-align: center; border-top: 1px solid var(--border);">
+    <footer class="footer">
         <div class="container">
-            <p style="color: var(--text-secondary);">
-                &copy; 2025 PaaS Platform. Propulsé par Proxmox & Terraform.
-            </p>
+            <p>© 2025 CloudDeploy PaaS Platform. Propulsé par Proxmox & Terraform.</p>
         </div>
     </footer>
 
@@ -156,8 +164,7 @@
                 if (data.success) {
                     document.getElementById('total-deployments').textContent = data.stats.total_deployments;
                     document.getElementById('active-deployments').textContent = data.stats.running_deployments;
-                    document.getElementById('success-rate').textContent =
-                        data.stats.success_rate.toFixed(1) + '%';
+                    document.getElementById('success-rate').textContent = data.stats.success_rate.toFixed(0) + '%';
                 }
             } catch (error) {
                 console.error('Error loading stats:', error);
@@ -172,13 +179,19 @@
 
                 if (data.success) {
                     const grid = document.getElementById('frameworks-grid');
+                    const icons = {
+                        django: '🐍', laravel: '🔴', express: '🟢', flask: '🌶️',
+                        fastapi: '⚡', react: '⚛️', vuejs: '💚', nextjs: '▲'
+                    };
 
-                    Object.entries(data.frameworks).forEach(([key, framework]) => {
+                    Object.entries(data.frameworks).forEach(([key, framework], index) => {
                         const card = document.createElement('div');
-                        card.className = 'card';
+                        card.className = 'card fade-in';
+                        card.style.animationDelay = `${index * 0.1}s`;
                         card.innerHTML = `
-                            <h3>${framework.name}</h3>
-                            <p style="font-size: 0.9rem; color: var(--text-secondary);">
+                            <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">${icons[key] || '📦'}</div>
+                            <h4>${framework.name}</h4>
+                            <p style="font-size: 0.85rem; margin: 0;">
                                 ${framework.language} • Port ${framework.port}
                             </p>
                         `;

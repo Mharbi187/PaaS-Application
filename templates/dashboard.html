@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Tableau de bord des déploiements PaaS">
-    <title>Tableau de Bord - PaaS Platform</title>
+    <title>Dashboard - CloudDeploy</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 
@@ -14,185 +14,161 @@
     <nav class="navbar">
         <div class="container nav-container">
             <a href="/" class="logo">
-                <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-                    <path d="M16 4L4 10V22L16 28L28 22V10L16 4Z" stroke="hsl(212, 100%, 50%)" stroke-width="2" />
+                <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+                    <defs>
+                        <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#667eea" />
+                            <stop offset="100%" style="stop-color:#764ba2" />
+                        </linearGradient>
+                    </defs>
+                    <path d="M20 5L5 13V27L20 35L35 27V13L20 5Z" stroke="url(#logoGrad)" stroke-width="2.5"
+                        fill="none" />
+                    <circle cx="20" cy="20" r="6" fill="url(#logoGrad)" opacity="0.3" />
+                    <circle cx="20" cy="20" r="3" fill="url(#logoGrad)" />
                 </svg>
-                PaaS Platform
+                CloudDeploy
             </a>
             <ul class="nav-links">
                 <li><a href="/">Accueil</a></li>
                 <li><a href="/deploy">Nouveau Déploiement</a></li>
-                <li><a href="/dashboard">Tableau de Bord</a></li>
+                <li><a href="/dashboard" class="active">Tableau de Bord</a></li>
             </ul>
         </div>
     </nav>
 
     <!-- Main Content -->
-    <section class="section" style="padding-top: 100px;">
+    <section class="section" style="padding-top: 120px;">
         <div class="container">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
-                <h1>Tableau de Bord</h1>
-                <a href="/deploy" class="btn btn-primary">+ Nouveau Déploiement</a>
+            <!-- Header -->
+            <div
+                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+                <div>
+                    <h1 style="margin-bottom: 0.5rem;">Dashboard</h1>
+                    <p style="margin: 0; color: var(--text-muted);">Gérez et surveillez vos déploiements</p>
+                </div>
+                <a href="/deploy" class="btn btn-primary">
+                    ✨ Nouveau Déploiement
+                </a>
             </div>
 
             <!-- Statistics Cards -->
             <div class="grid grid-4 mb-3">
-                <div class="card">
-                    <p style="color: var(--text-secondary); margin-bottom: 0.5rem;">Total</p>
-                    <h2 class="text-gradient" id="stat-total">0</h2>
+                <div class="card stat-card">
+                    <div class="stat-value" id="stat-total">0</div>
+                    <div class="stat-label">Total</div>
                 </div>
-                <div class="card">
-                    <p style="color: var(--text-secondary); margin-bottom: 0.5rem;">En cours</p>
-                    <h2 style="color: hsl(160, 84%, 39%);" id="stat-running">0</h2>
+                <div class="card stat-card">
+                    <div class="stat-value success" id="stat-running">0</div>
+                    <div class="stat-label">En Cours</div>
                 </div>
-                <div class="card">
-                    <p style="color: var(--text-secondary); margin-bottom: 0.5rem;">Échoués</p>
-                    <h2 style="color: hsl(350, 80%, 60%);" id="stat-failed">0</h2>
+                <div class="card stat-card">
+                    <div class="stat-value danger" id="stat-failed">0</div>
+                    <div class="stat-label">Échoués</div>
                 </div>
-                <div class="card">
-                    <p style="color: var(--text-secondary); margin-bottom: 0.5rem;">Taux de Réussite</p>
-                    <h2 style="color: hsl(212, 100%, 50%);" id="stat-success-rate">100%</h2>
+                <div class="card stat-card">
+                    <div class="stat-value" id="stat-success-rate">100%</div>
+                    <div class="stat-label">Réussite</div>
                 </div>
             </div>
 
             <!-- Deployments List -->
             <div class="card">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-                    <h2>Mes Déploiements</h2>
+                <div
+                    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+                    <h2 style="margin: 0;">Mes Déploiements</h2>
                     <div style="display: flex; gap: 0.5rem;">
-                        <button onclick="syncFromProxmox()" class="btn btn-secondary" style="padding: 0.5rem 1rem;"
-                            title="Import existing VMs/LXCs from Proxmox">
+                        <button onclick="syncFromProxmox()" class="btn btn-secondary btn-sm">
                             📥 Sync Proxmox
                         </button>
-                        <button onclick="loadDeployments()" class="btn btn-secondary" style="padding: 0.5rem 1rem;">
+                        <button onclick="loadDeployments()" class="btn btn-secondary btn-sm">
                             🔄 Actualiser
                         </button>
                     </div>
                 </div>
 
                 <div id="deployments-container">
-                    <!-- Deployments will be loaded here -->
-                    <div style="text-align: center; padding: 3rem;">
+                    <!-- Loading state -->
+                    <div style="text-align: center; padding: 4rem 2rem;">
                         <div class="spinner" style="margin: 0 auto 1rem;"></div>
-                        <p>Chargement des déploiements...</p>
+                        <p style="margin: 0;">Chargement des déploiements...</p>
                     </div>
                 </div>
+            </div>
+
+            <!-- Proxmox Infrastructure -->
+            <div class="card mt-3" id="infrastructure-section" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                    <h2 style="margin: 0;">🖥️ Infrastructure Proxmox</h2>
+                    <span id="infra-last-update" style="color: var(--text-muted); font-size: 0.85rem;"></span>
+                </div>
+                <div id="dashboard-nodes-container"></div>
             </div>
         </div>
     </section>
 
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
     <script>
-        // Status badge colors
-        const STATUS_COLORS = {
-            pending: 'hsl(45, 90%, 50%)',       // Professional Orange/Yellow
-            provisioning: 'hsl(212, 100%, 50%)', // Primary Blue
-            deploying: 'hsl(212, 100%, 50%)',    // Primary Blue
-            running: 'hsl(160, 84%, 39%)',       // Professional Emerald
-            failed: 'hsl(350, 80%, 60%)',        // Soft Red
-            stopped: 'hsl(215, 20%, 50%)',       // Muted Slate
-            deleted: 'hsl(215, 20%, 40%)'        // Dark Slate
+        // Status configurations
+        const STATUS_CONFIG = {
+            pending: { color: 'warning', icon: '⏳', label: 'En attente' },
+            provisioning: { color: 'warning', icon: '⚙️', label: 'Provisionnement' },
+            deploying: { color: 'warning', icon: '🚀', label: 'Déploiement' },
+            running: { color: 'running', icon: '✅', label: 'En cours' },
+            failed: { color: 'failed', icon: '❌', label: 'Échoué' },
+            stopped: { color: 'stopped', icon: '⏸️', label: 'Arrêté' },
+            deleted: { color: 'deleted', icon: '🗑️', label: 'Supprimé' }
         };
 
-        // Status icons
-        const STATUS_ICONS = {
-            pending: '⏳',
-            provisioning: '⚙️',
-            deploying: '🚀',
-            running: '✅',
-            failed: '❌',
-            stopped: '⏸️',
-            deleted: '🗑️'
-        };
-
-        // Framework default ports
+        // Framework ports
         const FRAMEWORK_PORTS = {
-            django: 8000,
-            laravel: 8000,
-            express: 3000,
-            flask: 5000,
-            fastapi: 8000,
-            react: 3000,
-            vuejs: 8080,
-            nextjs: 3000,
-            unknown: 80
+            django: 8000, laravel: 8000, express: 3000, flask: 5000,
+            fastapi: 8000, react: 3000, vuejs: 8080, nextjs: 3000
         };
 
-        // Get framework port
         function getFrameworkPort(framework) {
             return FRAMEWORK_PORTS[framework] || 80;
+        }
+
+        // Notification system
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `alert alert-${type === 'error' ? 'error' : type === 'success' ? 'success' : 'info'}`;
+            notification.style.cssText = `
+                position: fixed;
+                bottom: 20px;
+                right: 20px;
+                z-index: 10000;
+                animation: slideIn 0.3s ease;
+                max-width: 400px;
+            `;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+
+            setTimeout(() => {
+                notification.style.animation = 'slideIn 0.3s ease reverse';
+                setTimeout(() => notification.remove(), 300);
+            }, 4000);
         }
 
         // Copy to clipboard
         function copyToClipboard(text) {
             navigator.clipboard.writeText(text).then(() => {
-                showNotification('✅ IP copied to clipboard: ' + text);
-            }).catch(err => {
-                // Fallback for older browsers
+                showNotification('✅ Copié: ' + text, 'success');
+            }).catch(() => {
                 const textarea = document.createElement('textarea');
                 textarea.value = text;
                 document.body.appendChild(textarea);
                 textarea.select();
                 document.execCommand('copy');
                 document.body.removeChild(textarea);
-                showNotification('✅ IP copied to clipboard: ' + text);
+                showNotification('✅ Copié: ' + text, 'success');
             });
         }
 
-        // Open SSH connection (shows command to copy)
+        // SSH command
         function openSSH(ip) {
-            const sshCommand = `ssh root@${ip}`;
-
-            // Try to copy to clipboard
-            navigator.clipboard.writeText(sshCommand).then(() => {
-                showNotification('📋 SSH command copied: ' + sshCommand);
-            }).catch(() => {
-                // Show modal with command
-                alert('SSH Command:\n\n' + sshCommand + '\n\nCopy this command and paste it in your terminal.');
-            });
-
-            // Attempt to open SSH URL (works on some systems with ssh:// handler)
-            // window.open(`ssh://root@${ip}`, '_blank');
-        }
-
-        // Show notification
-        function showNotification(message) {
-            // Create notification element
-            const notification = document.createElement('div');
-            notification.style.cssText = `
-                position: fixed;
-                bottom: 20px;
-                right: 20px;
-                background: var(--surface-elevated);
-                border: 1px solid var(--border);
-                padding: 1rem 1.5rem;
-                border-radius: 8px;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-                z-index: 10000;
-                animation: slideIn 0.3s ease;
-                color: var(--text-primary);
-            `;
-            notification.textContent = message;
-            document.body.appendChild(notification);
-
-            // Add animation keyframes if not exists
-            if (!document.querySelector('#notification-styles')) {
-                const style = document.createElement('style');
-                style.id = 'notification-styles';
-                style.textContent = `
-                    @keyframes slideIn {
-                        from { transform: translateX(100%); opacity: 0; }
-                        to { transform: translateX(0); opacity: 1; }
-                    }
-                `;
-                document.head.appendChild(style);
-            }
-
-            // Remove after 3 seconds
-            setTimeout(() => {
-                notification.style.animation = 'slideIn 0.3s ease reverse';
-                setTimeout(() => notification.remove(), 300);
-            }, 3000);
+            const cmd = `ssh root@${ip}`;
+            copyToClipboard(cmd);
         }
 
         // Load statistics
@@ -205,8 +181,7 @@
                     document.getElementById('stat-total').textContent = data.stats.total_deployments;
                     document.getElementById('stat-running').textContent = data.stats.running_deployments;
                     document.getElementById('stat-failed').textContent = data.stats.failed_deployments;
-                    document.getElementById('stat-success-rate').textContent =
-                        data.stats.success_rate.toFixed(1) + '%';
+                    document.getElementById('stat-success-rate').textContent = data.stats.success_rate.toFixed(0) + '%';
                 }
             } catch (error) {
                 console.error('Error loading stats:', error);
@@ -224,118 +199,100 @@
                 if (data.success) {
                     if (data.deployments.length === 0) {
                         container.innerHTML = `
-                            <div style="text-align: center; padding: 3rem;">
-                                <div style="font-size: 4rem; margin-bottom: 1rem;">📦</div>
-                                <h3 style="margin-bottom: 1rem;">Aucun déploiement</h3>
-                                <p style="margin-bottom: 2rem;">Créez votre premier déploiement pour commencer</p>
-                                <a href="/deploy" class="btn btn-primary">Créer un Déploiement</a>
+                            <div style="text-align: center; padding: 4rem 2rem;">
+                                <div style="font-size: 5rem; margin-bottom: 1rem; opacity: 0.5;">📦</div>
+                                <h3 style="margin-bottom: 0.5rem;">Aucun déploiement</h3>
+                                <p style="margin-bottom: 2rem; color: var(--text-muted);">
+                                    Créez votre premier déploiement pour commencer
+                                </p>
+                                <a href="/deploy" class="btn btn-primary">
+                                    ✨ Créer un Déploiement
+                                </a>
                             </div>
                         `;
                     } else {
-                        container.innerHTML = '';
-
-                        // Create table
-                        const table = document.createElement('div');
-                        table.style.overflowX = 'auto';
-
-                        table.innerHTML = `
-                            <table style="width: 100%; border-collapse: collapse;">
-                                <thead>
-                                    <tr style="border-bottom: 1px solid var(--border);">
-                                        <th style="text-align: left; padding: 1rem;">Nom</th>
-                                        <th style="text-align: left; padding: 1rem;">Type</th>
-                                        <th style="text-align: left; padding: 1rem;">Framework</th>
-                                        <th style="text-align: left; padding: 1rem;">Status</th>
-                                        <th style="text-align: left; padding: 1rem;">IP</th>
-                                        <th style="text-align: left; padding: 1rem;">Ressources</th>
-                                        <th style="text-align: right; padding: 1rem;">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="deployments-tbody">
-                                </tbody>
-                            </table>
+                        container.innerHTML = `
+                            <div class="table-container">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Application</th>
+                                            <th>Type</th>
+                                            <th>Framework</th>
+                                            <th>Status</th>
+                                            <th>Adresse IP</th>
+                                            <th>Ressources</th>
+                                            <th style="text-align: right;">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="deployments-tbody"></tbody>
+                                </table>
+                            </div>
                         `;
-
-                        container.appendChild(table);
 
                         const tbody = document.getElementById('deployments-tbody');
 
                         data.deployments.forEach(deployment => {
+                            const config = STATUS_CONFIG[deployment.status] || STATUS_CONFIG.pending;
+                            const port = getFrameworkPort(deployment.framework);
                             const row = document.createElement('tr');
-                            row.style.borderBottom = '1px solid var(--border)';
-
-                            const statusColor = STATUS_COLORS[deployment.status] || 'var(--text-secondary)';
-                            const statusIcon = STATUS_ICONS[deployment.status] || '●';
 
                             row.innerHTML = `
-                                <td style="padding: 1rem;">
-                                    <strong>${deployment.name}</strong>
-                                    <br>
-                                    <small style="color: var(--text-secondary);">
-                                        ${new Date(deployment.created_at).toLocaleString('fr-FR')}
-                                    </small>
+                                <td>
+                                    <div style="font-weight: 600;">${deployment.name}</div>
+                                    <div style="font-size: 0.8rem; color: var(--text-muted);">
+                                        ${new Date(deployment.created_at).toLocaleDateString('fr-FR')}
+                                    </div>
                                 </td>
-                                <td style="padding: 1rem;">
-                                    ${deployment.deployment_type === 'vm' ? '🖥️ VM' : '📦 LXC'}
+                                <td>
+                                    <span style="font-size: 1.25rem;">${deployment.deployment_type === 'vm' ? '🖥️' : '📦'}</span>
+                                    <span style="color: var(--text-secondary); font-size: 0.85rem;">${deployment.deployment_type.toUpperCase()}</span>
                                 </td>
-                                <td style="padding: 1rem;">${deployment.framework}</td>
-                                <td style="padding: 1rem;">
-                                    <span style="color: ${statusColor};">
-                                        ${statusIcon} ${deployment.status}
+                                <td style="text-transform: capitalize;">${deployment.framework}</td>
+                                <td>
+                                    <span class="status-badge status-${config.color}">
+                                        ${config.icon} ${config.label}
                                     </span>
                                 </td>
-                                <td style="padding: 1rem;">
-                                    ${deployment.ip_address ?
-                                    `<div class="ip-actions" style="position: relative;">
-                                        <a href="http://${deployment.ip_address}:${getFrameworkPort(deployment.framework)}" 
-                                           target="_blank" 
-                                           style="color: var(--primary); font-family: monospace;"
-                                           title="Open in browser (port ${getFrameworkPort(deployment.framework)})">${deployment.ip_address}</a>
-                                        <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
-                                            <button onclick="copyToClipboard('${deployment.ip_address}')" 
-                                                    class="ip-btn" title="Copy IP"
-                                                    style="padding: 0.25rem 0.5rem; font-size: 0.75rem; background: var(--surface-elevated); border: 1px solid var(--border); border-radius: 4px; cursor: pointer; color: var(--text-secondary);">
-                                                📋
-                                            </button>
-                                            <button onclick="openSSH('${deployment.ip_address}')" 
-                                                    class="ip-btn" title="SSH Command"
-                                                    style="padding: 0.25rem 0.5rem; font-size: 0.75rem; background: var(--surface-elevated); border: 1px solid var(--border); border-radius: 4px; cursor: pointer; color: var(--text-secondary);">
-                                                🔗 SSH
-                                            </button>
-                                            <a href="http://${deployment.ip_address}:${getFrameworkPort(deployment.framework)}" 
-                                               target="_blank"
-                                               style="padding: 0.25rem 0.5rem; font-size: 0.75rem; background: var(--surface-elevated); border: 1px solid var(--border); border-radius: 4px; cursor: pointer; color: var(--text-secondary); text-decoration: none;"
-                                               title="Open App">
-                                                🌐 Open
+                                <td>
+                                    ${deployment.ip_address ? `
+                                        <div style="font-family: monospace; font-size: 0.9rem; margin-bottom: 0.5rem;">
+                                            <a href="http://${deployment.ip_address}:${port}" target="_blank" 
+                                               style="color: var(--primary-light); text-decoration: none;">
+                                                ${deployment.ip_address}
                                             </a>
                                         </div>
-                                    </div>` :
-                                    '<span style="color: var(--text-secondary);">N/A</span>'}
+                                        <div style="display: flex; gap: 0.25rem;">
+                                            <button onclick="copyToClipboard('${deployment.ip_address}')" class="icon-btn" title="Copier IP">
+                                                📋
+                                            </button>
+                                            <button onclick="openSSH('${deployment.ip_address}')" class="icon-btn" title="SSH">
+                                                🔗
+                                            </button>
+                                            <a href="http://${deployment.ip_address}:${port}" target="_blank" class="icon-btn" title="Ouvrir">
+                                                🌐
+                                            </a>
+                                        </div>
+                                    ` : '<span style="color: var(--text-muted);">—</span>'}
                                 </td>
-                                <td style="padding: 1rem;">
-                                    <small style="color: var(--text-secondary);">
-                                        ${deployment.resources.cores} Cores<br>
-                                        ${deployment.resources.memory} MB RAM<br>
-                                        ${deployment.resources.disk} GB Disk
-                                    </small>
+                                <td>
+                                    <div style="font-size: 0.8rem; color: var(--text-secondary); line-height: 1.6;">
+                                        ${deployment.resources.cores} CPU<br>
+                                        ${deployment.resources.memory} MB<br>
+                                        ${deployment.resources.disk} GB
+                                    </div>
                                 </td>
-                                <td style="padding: 1rem; text-align: right;">
-                                    <button 
-                                        onclick="viewDeployment('${deployment.id}')" 
-                                        class="btn btn-secondary" 
-                                        style="padding: 0.5rem 1rem; font-size: 0.875rem; margin-right: 0.5rem;"
-                                    >
-                                        👁️ Voir
-                                    </button>
-                                    ${deployment.status !== 'deleted' ? `
-                                        <button 
-                                            onclick="deleteDeployment('${deployment.id}', '${deployment.name}')" 
-                                            class="btn btn-secondary" 
-                                            style="padding: 0.5rem 1rem; font-size: 0.875rem; color: hsl(357, 100%, 64%);"
-                                        >
-                                            🗑️ Supprimer
+                                <td style="text-align: right;">
+                                    <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                                        <button onclick="viewDeployment('${deployment.id}')" class="btn btn-secondary btn-sm">
+                                            👁️ Détails
                                         </button>
-                                    ` : ''}
+                                        ${deployment.status !== 'deleted' ? `
+                                            <button onclick="deleteDeployment('${deployment.id}', '${deployment.name}')" class="btn btn-danger btn-sm">
+                                                🗑️
+                                            </button>
+                                        ` : ''}
+                                    </div>
                                 </td>
                             `;
 
@@ -343,189 +300,150 @@
                         });
                     }
 
-                    // Reload stats
                     loadStats();
                 }
             } catch (error) {
                 console.error('Error loading deployments:', error);
                 container.innerHTML = `
                     <div class="alert alert-error">
-                        Erreur lors du chargement des déploiements: ${error.message}
+                        Erreur lors du chargement: ${error.message}
                     </div>
                 `;
             }
         }
 
-        // View deployment details
+        // View deployment
         function viewDeployment(id) {
-            // For now, just log the ID
-            console.log('View deployment:', id);
-            alert('Fonctionnalité à venir: Afficher les détails du déploiement ' + id);
+            showNotification('🔧 Fonctionnalité à venir', 'info');
         }
 
         // Sync from Proxmox
         async function syncFromProxmox() {
             const btn = event.target;
-            const originalText = btn.textContent;
-            btn.textContent = '⏳ Syncing...';
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '⏳ Sync...';
             btn.disabled = true;
 
             try {
-                const response = await fetch('/api/proxmox/sync', {
-                    method: 'POST'
-                });
-
+                const response = await fetch('/api/proxmox/sync', { method: 'POST' });
                 const data = await response.json();
 
                 if (data.success) {
-                    showNotification(`✅ ${data.message}`);
+                    showNotification(`✅ ${data.message}`, 'success');
                     if (data.imported_count > 0) {
                         loadDeployments();
-                        loadStats();
                     }
                 } else {
-                    showNotification('❌ Sync failed: ' + data.error);
+                    showNotification('❌ ' + data.error, 'error');
                 }
             } catch (error) {
-                console.error('Error syncing from Proxmox:', error);
-                showNotification('❌ Sync error: ' + error.message);
+                showNotification('❌ ' + error.message, 'error');
             } finally {
-                btn.textContent = originalText;
+                btn.innerHTML = originalText;
                 btn.disabled = false;
             }
         }
 
         // Delete deployment
         async function deleteDeployment(id, name) {
-            if (!confirm(`Êtes-vous sûr de vouloir supprimer le déploiement "${name}" ?`)) {
+            if (!confirm(`Supprimer "${name}" ?\n\nCette action détruira l'infrastructure associée.`)) {
                 return;
             }
 
             try {
-                const response = await fetch(`/api/deployments/${id}`, {
-                    method: 'DELETE'
-                });
-
+                const response = await fetch(`/api/deployments/${id}`, { method: 'DELETE' });
                 const data = await response.json();
 
                 if (data.success) {
-                    alert('Déploiement supprimé avec succès');
+                    showNotification('✅ Déploiement supprimé', 'success');
                     loadDeployments();
                 } else {
-                    alert('Erreur: ' + data.error);
+                    showNotification('❌ ' + data.error, 'error');
                 }
             } catch (error) {
-                console.error('Error deleting deployment:', error);
-                alert('Erreur lors de la suppression: ' + error.message);
+                showNotification('❌ ' + error.message, 'error');
             }
         }
 
-        // Auto-refresh every 30 seconds
-        setInterval(loadDeployments, 30000);
-
-        // Load Infrastructure for Dashboard
+        // Load Proxmox infrastructure
         async function loadDashboardInfrastructure() {
             const container = document.getElementById('dashboard-nodes-container');
+            const section = document.getElementById('infrastructure-section');
 
             try {
-                // Get Nodes
                 const nodesRes = await fetch('/api/proxmox/nodes');
                 const nodesData = await nodesRes.json();
 
-                if (!nodesData.success) throw new Error(nodesData.error);
+                if (!nodesData.success) return;
 
+                section.style.display = 'block';
                 container.innerHTML = '';
 
                 for (const node of nodesData.nodes) {
-                    const nodeSection = document.createElement('div');
-
-                    // Get VMs for this node
                     const vmsRes = await fetch(`/api/proxmox/nodes/${node.node}/vms`);
                     const vmsData = await vmsRes.json();
 
                     const vmsList = vmsData.resources.map(vm => `
-                        <tr style="border-bottom: 1px solid var(--border); transition: background 0.2s;">
-                            <td style="padding: 0.75rem 1rem;">
-                                <span style="font-family: monospace; color: var(--text-secondary);">${vm.id}</span>
+                        <tr>
+                            <td style="font-family: monospace;">${vm.id}</td>
+                            <td><strong>${vm.name}</strong></td>
+                            <td>
+                                <span class="status-badge" style="background: ${vm.type === 'lxc' ? 'rgba(167, 139, 250, 0.15)' : 'rgba(96, 165, 250, 0.15)'}; color: ${vm.type === 'lxc' ? '#a78bfa' : '#60a5fa'};">
+                                    ${vm.type.toUpperCase()}
+                                </span>
                             </td>
-                            <td style="padding: 0.75rem 1rem; font-weight: 500;">
-                                ${vm.name}
+                            <td>
+                                <span class="status-badge status-${vm.status === 'running' ? 'running' : 'stopped'}">
+                                    ${vm.status === 'running' ? '🟢' : '⚪'} ${vm.status}
+                                </span>
                             </td>
-                            <td style="padding: 0.75rem 1rem;">
-                                <span style="
-                                    background: ${vm.type === 'lxc' ? 'hsla(340, 80%, 60%, 0.1)' : 'hsla(212, 100%, 50%, 0.1)'};
-                                    color: ${vm.type === 'lxc' ? 'hsl(340, 80%, 60%)' : 'hsl(212, 100%, 50%)'};
-                                    padding: 0.2rem 0.5rem;
-                                    border-radius: 4px;
-                                    font-size: 0.75rem;
-                                    font-weight: 600;
-                                ">${vm.type.toUpperCase()}</span>
-                            </td>
-                            <td style="padding: 0.75rem 1rem;">
-                                <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                    <div style="width: 8px; height: 8px; border-radius: 50%; background: ${vm.status === 'running' ? 'hsl(160, 84%, 39%)' : 'hsl(215, 20%, 50%)'};"></div>
-                                    <span style="color: ${vm.status === 'running' ? 'var(--text-primary)' : 'var(--text-secondary)'}">
-                                        ${vm.status}
-                                    </span>
-                                </div>
-                            </td>
-                            <td style="padding: 0.75rem 1rem; color: var(--text-secondary); font-size: 0.9rem;">
-                                ${Math.round(vm.memory / 1024 / 1024)} MB
-                            </td>
+                            <td>${Math.round(vm.memory / 1024 / 1024)} MB</td>
                         </tr>
                     `).join('');
 
-                    nodeSection.innerHTML = `
-                        <div style="margin-bottom: 1rem;">
-                            <div style="display: flex; gap: 1rem; margin-bottom: 1rem; align-items: baseline;">
-                                <h3 style="margin: 0; font-size: 1.1rem; color: var(--primary-light);">📦 Node: ${node.node}</h3>
-                                <span style="font-size: 0.9rem; color: var(--text-secondary);">CPU Usage: ${(node.cpu * 100).toFixed(1)}%</span>
+                    const nodeEl = document.createElement('div');
+                    nodeEl.innerHTML = `
+                        <div style="margin-bottom: 1.5rem;">
+                            <div style="display: flex; gap: 1rem; align-items: baseline; margin-bottom: 1rem;">
+                                <h4 style="margin: 0; color: var(--primary-light);">📦 ${node.node}</h4>
+                                <span style="font-size: 0.85rem; color: var(--text-muted);">
+                                    CPU: ${(node.cpu * 100).toFixed(1)}%
+                                </span>
                             </div>
-                            
-                            <div style="border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden;">
-                                <table style="width: 100%; border-collapse: collapse;">
-                                    <thead style="background: rgba(0,0,0,0.2);">
-                                        <tr style="text-align: left; color: var(--text-secondary); font-size: 0.85rem;">
-                                            <th style="padding: 0.75rem 1rem;">ID</th>
-                                            <th style="padding: 0.75rem 1rem;">Name</th>
-                                            <th style="padding: 0.75rem 1rem;">Type</th>
-                                            <th style="padding: 0.75rem 1rem;">Status</th>
-                                            <th style="padding: 0.75rem 1rem;">Memory</th>
+                            <div class="table-container" style="border: 1px solid var(--border); border-radius: var(--radius-md);">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Nom</th>
+                                            <th>Type</th>
+                                            <th>Status</th>
+                                            <th>Mémoire</th>
                                         </tr>
                                     </thead>
-                                    <tbody>
-                                        ${vmsList.length ? vmsList : '<tr><td colspan="5" style="padding: 1rem; text-align: center; color: var(--text-secondary);">Aucune ressource trouvée</td></tr>'}
-                                    </tbody>
+                                    <tbody>${vmsList || '<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Aucune ressource</td></tr>'}</tbody>
                                 </table>
                             </div>
                         </div>
                     `;
-
-                    container.appendChild(nodeSection);
+                    container.appendChild(nodeEl);
                 }
 
-                // Update time
-                const now = new Date();
-                document.getElementById('infra-last-update').textContent = `MàJ: ${now.toLocaleTimeString()}`;
-
+                document.getElementById('infra-last-update').textContent = `MàJ: ${new Date().toLocaleTimeString()}`;
             } catch (error) {
-                console.error('Infrastructure load error:', error);
-                container.innerHTML = `
-                    <div class="alert alert-error" style="margin: 0;">
-                        Erreur de connexion à Proxmox: ${error.message}
-                    </div>
-                `;
+                console.error('Infrastructure error:', error);
             }
         }
+
+        // Auto-refresh
+        setInterval(loadDeployments, 30000);
+        setInterval(loadDashboardInfrastructure, 60000);
 
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
             loadStats();
             loadDeployments();
             loadDashboardInfrastructure();
-
-            // Refresh infra every 30s
-            setInterval(loadDashboardInfrastructure, 30000);
         });
     </script>
 </body>

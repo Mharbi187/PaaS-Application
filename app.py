@@ -11,6 +11,7 @@ from config import config, Config
 
 # Import backend modules
 from backend.api.routes import api_bp
+from backend.api.proxmox_routes import api_proxmox_bp
 from backend.utils.helpers import setup_logging
 from backend.extensions import db, migrate, init_extensions
 
@@ -47,6 +48,7 @@ def create_app(config_name='default'):
     
     # Register blueprints
     app.register_blueprint(api_bp, url_prefix='/api')
+    app.register_blueprint(api_proxmox_bp, url_prefix='/api')
     
     # Routes
     @app.route('/')
