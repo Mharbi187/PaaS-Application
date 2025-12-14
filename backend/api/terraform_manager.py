@@ -375,6 +375,8 @@ class TerraformManager:
         """
         Deploy application on provisioned infrastructure via SSH
         
+        Supports SSH jump host (routing through Proxmox) for cross-network deployments.
+        
         Args:
             ip_address: IP address of the VM/LXC
             framework: Framework identifier
@@ -399,28 +401,68 @@ class TerraformManager:
             ssh_user = current_app.config.get('SSH_USER', 'root')
             private_key_path, _ = self._ensure_ssh_keypair()
             
+            # Check if jump host is configured
+            jump_host = current_app.config.get('SSH_JUMP_HOST', '')
+            
             # Wait for SSH to be ready
             logger.info(f"Waiting for SSH to be ready on {ip_address}")
             max_retries = 30
+            ssh = None
+            
             for i in range(max_retries):
                 try:
                     ssh = paramiko.SSHClient()
                     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
                     
-                    # Use private key for authentication
-                    ssh.connect(
-                        ip_address, 
-                        username=ssh_user, 
-                        key_filename=str(private_key_path),
-                        timeout=10,
-                        look_for_keys=False,
-                        allow_agent=False
-                    )
-                    logger.info(f"SSH connection established to {ip_address}")
+                    if jump_host:
+                        # Use Proxmox as SSH jump host
+                        logger.info(f"Using SSH jump host: {jump_host}")
+                        jump_user = current_app.config.get('SSH_JUMP_USER', 'root')
+                        jump_password = current_app.config.get('SSH_JUMP_PASSWORD', '')
+                        
+                        # Connect to jump host (Proxmox)
+                        jump_client = paramiko.SSHClient()
+                        jump_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                        jump_client.connect(
+                            jump_host,
+                            username=jump_user,
+                            password=jump_password,
+                            timeout=10
+                        )
+                        
+                        # Create a channel to the target through the jump host
+                        jump_transport = jump_client.get_transport()
+                        dest_addr = (ip_address, 22)
+                        local_addr = ('127.0.0.1', 0)
+                        channel = jump_transport.open_channel('direct-tcpip', dest_addr, local_addr)
+                        
+                        # Connect to target VM through the channel
+                        ssh.connect(
+                            ip_address,
+                            username=ssh_user,
+                            key_filename=str(private_key_path),
+                            sock=channel,
+                            timeout=10,
+                            look_for_keys=False,
+                            allow_agent=False
+                        )
+                        logger.info(f"SSH connection established to {ip_address} via jump host {jump_host}")
+                    else:
+                        # Direct connection (same network)
+                        ssh.connect(
+                            ip_address, 
+                            username=ssh_user, 
+                            key_filename=str(private_key_path),
+                            timeout=10,
+                            look_for_keys=False,
+                            allow_agent=False
+                        )
+                        logger.info(f"SSH connection established to {ip_address} (direct)")
                     break
                 except Exception as e:
                     if i == max_retries - 1:
                         raise Exception(f"SSH connection failed after {max_retries} attempts: {e}")
+                    logger.warning(f"SSH connection attempt {i+1} failed: {e}")
                     time.sleep(10)
             
             # Build deployment commands based on framework
@@ -532,37 +574,48 @@ class TerraformManager:
         # Step 5: Install dependencies and start application based on framework
         if framework == 'react':
             # React: Install, build, serve with PM2
+            # NODE_OPTIONS fixes OpenSSL 3.0 compatibility with older webpack
+            # Handles both Vite (dist) and CRA (build) output directories
             install_and_start = (
                 "cd /opt/app && "
+                "export NODE_OPTIONS=--openssl-legacy-provider && "
                 "npm install --legacy-peer-deps 2>&1 | tail -20 && "
-                "npm run build 2>&1 | tail -20 && "
+                "(npm run build 2>&1 | tail -30 || true) && "
                 "pm2 delete react-app 2>/dev/null || true && "
-                f"pm2 serve build {port} --name react-app --spa && "
-                "pm2 save"
+                "BUILD_DIR=$(if [ -d 'dist' ]; then echo 'dist'; elif [ -d 'build' ]; then echo 'build'; else echo '.'; fi) && "
+                f"pm2 serve $BUILD_DIR {port} --name react-app --spa && "
+                "pm2 save && "
+                "pm2 startup systemd -u root --hp /root 2>/dev/null || true"
             )
             commands.append(install_and_start)
             
         elif framework == 'vuejs':
             # Vue.js: Install, build, serve with PM2
+            # NODE_OPTIONS fixes OpenSSL 3.0 compatibility with older webpack
             install_and_start = (
                 "cd /opt/app && "
+                "export NODE_OPTIONS=--openssl-legacy-provider && "
                 "npm install --legacy-peer-deps 2>&1 | tail -20 && "
                 "npm run build 2>&1 | tail -20 && "
                 "pm2 delete vue-app 2>/dev/null || true && "
                 f"pm2 serve dist {port} --name vue-app --spa && "
-                "pm2 save"
+                "pm2 save && "
+                "pm2 startup systemd -u root --hp /root 2>/dev/null || true"
             )
             commands.append(install_and_start)
             
         elif framework == 'nextjs':
             # Next.js: Install, build, start with PM2
+            # NODE_OPTIONS fixes OpenSSL 3.0 compatibility with older webpack
             install_and_start = (
                 "cd /opt/app && "
+                "export NODE_OPTIONS=--openssl-legacy-provider && "
                 "npm install --legacy-peer-deps 2>&1 | tail -20 && "
                 "npm run build 2>&1 | tail -20 && "
                 "pm2 delete nextjs-app 2>/dev/null || true && "
                 "pm2 start npm --name nextjs-app -- start && "
-                "pm2 save"
+                "pm2 save && "
+                "pm2 startup systemd -u root --hp /root 2>/dev/null || true"
             )
             commands.append(install_and_start)
             
@@ -573,7 +626,8 @@ class TerraformManager:
                 "npm install 2>&1 | tail -20 && "
                 "pm2 delete express-app 2>/dev/null || true && "
                 "pm2 start npm --name express-app -- start && "
-                "pm2 save"
+                "pm2 save && "
+                "pm2 startup systemd -u root --hp /root 2>/dev/null || true"
             )
             commands.append(install_and_start)
             

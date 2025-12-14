@@ -52,6 +52,12 @@ class Config:
     SSH_PASSWORD = os.getenv('SSH_PASSWORD', '')
     SSH_PUBLIC_KEY = os.getenv('SSH_PUBLIC_KEY', '')
     
+    # SSH Jump Host (Proxmox as proxy) - enables deployments from any network
+    # Set SSH_JUMP_HOST to route SSH through Proxmox to reach VMs/LXC
+    SSH_JUMP_HOST = os.getenv('SSH_JUMP_HOST', '')  # e.g., 192.168.126.50 or empty to disable
+    SSH_JUMP_USER = os.getenv('SSH_JUMP_USER', 'root')
+    SSH_JUMP_PASSWORD = os.getenv('SSH_JUMP_PASSWORD', '')
+    
     # VM/LXC Templates
     VM_TEMPLATE = os.getenv('VM_TEMPLATE', 'ubuntu-22-cloudinit')
     LXC_OS_TEMPLATE = os.getenv('LXC_OS_TEMPLATE', 'debian-12-standard')
